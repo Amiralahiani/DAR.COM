@@ -52,15 +52,11 @@ $env:DAR_BOOTSTRAP_ADMIN_PASSWORD="MotDePasse123!"
 
 Sans ces variables, l'application demarre quand meme, mais les comptes admin ne sont pas crees automatiquement.
 
-## Migrations
-
-Les migrations sont appliquees automatiquement au demarrage (dans `Program.cs`).
 
 ## Fichiers a ne pas commit
 
 - `**/bin/`
 - `**/obj/`
-- `.vs/`
-- fichiers temporaires/logs (`*.tmp`, `*.log`, `.tmp*/`)
+
 - secrets reels (mots de passe, chaines de connexion sensibles)
 

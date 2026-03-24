@@ -1,0 +1,120 @@
+﻿@{
+    ViewData["Title"] = "Accueil - DAR.COM";
+}
+
+<div class="hero-section fade-in-up">
+    <div class="container text-center">
+        <h1 class="display-4 mb-4 fw-bold text-white hero-title-plain">Bienvenue sur DAR.COM</h1>
+        <p class="lead mb-4 fs-4">Gérez vos biens immobiliers avec style et simplicité</p>
+        <div class="mt-5">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a asp-controller="Dashboard" asp-action="Index" class="btn btn-light btn-lg me-3">
+                    <i class="bi bi-speedometer2"></i> Accéder au Dashboard
+                </a>
+                <a asp-controller="BienImmobilier" asp-action="Index" class="btn btn-outline-light btn-lg">
+                    <i class="bi bi-house-door"></i> Voir les biens
+                </a>
+            }
+            else
+            {
+                <a asp-controller="Account" asp-action="Login" class="btn btn-light btn-lg me-3">
+                    <i class="bi bi-box-arrow-in-right"></i> Se connecter
+                </a>
+                <a asp-controller="Account" asp-action="Register" class="btn btn-outline-light btn-lg">
+                    <i class="bi bi-person-plus"></i> S'inscrire
+                </a>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    @if (!User.Identity?.IsAuthenticated == true)
+    {
+        <div class="row g-4 mb-5">
+            <div class="col-md-4">
+                <div class="stat-card primary fade-in-up">
+                    <div class="mb-3">
+                        <i class="bi bi-house-heart icon-feature-lg icon-gold"></i>
+                    </div>
+                    <h3 class="stat-number">Gestion</h3>
+                    <p class="stat-label">Gérez facilement tous vos biens immobiliers en un seul endroit</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card success fade-in-up fade-delay-100">
+                    <div class="mb-3">
+                        <i class="bi bi-graph-up-arrow icon-feature-lg icon-emerald"></i>
+                    </div>
+                    <h3 class="stat-number">Analytics</h3>
+                    <p class="stat-label">Suivez vos performances avec des statistiques détaillées</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card warning fade-in-up fade-delay-200">
+                    <div class="mb-3">
+                        <i class="bi bi-shield-check icon-feature-lg icon-terracotta"></i>
+                    </div>
+                    <h3 class="stat-number">Sécurité</h3>
+                    <p class="stat-label">Vos données sont protégées avec les meilleures pratiques</p>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card search-card">
+                <div class="card-body text-center">
+                    <h3 class="mb-4">
+                        <i class="bi bi-envelope-heart text-primary"></i> Besoin d'aide ?
+                    </h3>
+                    <p class="lead mb-4">Notre équipe est là pour vous accompagner dans la gestion de vos biens immobiliers.</p>
+                    <a asp-controller="Message" asp-action="Create" class="btn btn-primary btn-lg">
+                        <i class="bi bi-chat-dots"></i> Nous contacter
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-lightning-charge"></i> Actions rapides
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <a asp-controller="BienImmobilier" asp-action="Create" class="btn btn-primary w-100">
+                                    <i class="bi bi-plus-circle"></i> Ajouter un bien
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                <a asp-controller="BienImmobilier" asp-action="Index" class="btn btn-outline-primary w-100">
+                                    <i class="bi bi-list-ul"></i> Liste des biens
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline-primary w-100">
+                                    <i class="bi bi-bar-chart"></i> Statistiques
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                <a asp-controller="Message" asp-action="Create" class="btn btn-outline-primary w-100">
+                                    <i class="bi bi-envelope"></i> Nouveau message
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

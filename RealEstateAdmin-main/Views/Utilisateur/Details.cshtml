@@ -1,0 +1,70 @@
+@model RealEstateAdmin.Models.UserRoleViewModel
+
+@{
+    ViewData["Title"] = "Détails de l'utilisateur";
+    var isSuperAdmin = User.IsInRole("SuperAdmin");
+}
+
+<div class="container">
+    <h1 class="mb-4 text-gradient">
+        <i class="bi bi-person"></i> Détails de l'utilisateur
+    </h1>
+
+    <div class="card">
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Nom</dt>
+                <dd class="col-sm-9">@Model.UserName</dd>
+
+                <dt class="col-sm-3">Email</dt>
+                <dd class="col-sm-9">@Model.Email</dd>
+
+                <dt class="col-sm-3">Rôle</dt>
+                <dd class="col-sm-9">
+                    <span class="badge bg-@(Model.CurrentRole == "SuperAdmin" ? "dark" : Model.CurrentRole == "Admin" ? "danger" : "primary")">
+                        @Model.CurrentRole
+                    </span>
+                </dd>
+
+                <dt class="col-sm-3">Email confirmé</dt>
+                <dd class="col-sm-9">
+                    @if (Model.EmailConfirmed)
+                    {
+                        <span class="badge bg-success">Oui</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-warning text-dark">Non</span>
+                    }
+                </dd>
+
+                <dt class="col-sm-3">Statut du compte</dt>
+                <dd class="col-sm-9">
+                    @if (Model.IsSuspended)
+                    {
+                        <span class="badge bg-danger">Suspendu</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success">Actif</span>
+                    }
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+        @if (isSuperAdmin)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.UserId" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> Modifier
+            </a>
+            <a asp-controller="Account" asp-action="ManageRoles" class="btn btn-outline-primary">
+                <i class="bi bi-shield-check"></i> Gérer les rôles
+            </a>
+        }
+        <a asp-action="Index" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Retour à la liste
+        </a>
+    </div>
+</div>

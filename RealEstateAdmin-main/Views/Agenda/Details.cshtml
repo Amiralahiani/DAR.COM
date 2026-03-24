@@ -1,0 +1,94 @@
+@model RealEstateAdmin.Services.AgendaEventDetails
+
+@{
+    ViewData["Title"] = "Détail agenda";
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-gradient mb-0">
+            <i class="bi bi-calendar2-check"></i> Détail agenda
+        </h1>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour agenda
+        </a>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">@Model.EventType - @Model.BienTitre</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Créneau</dt>
+                        <dd class="col-sm-8 fw-semibold">@Model.Slot.ToString("dddd dd/MM/yyyy HH:mm")</dd>
+
+                        <dt class="col-sm-4">Client</dt>
+                        <dd class="col-sm-8">
+                            @Model.ClientName
+                            @if (!string.IsNullOrWhiteSpace(Model.ClientEmail))
+                            {
+                                <span class="text-muted">(@Model.ClientEmail)</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-4">Assigné à</dt>
+                        <dd class="col-sm-8">@Model.AssigneeName</dd>
+
+                        <dt class="col-sm-4">Statut</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.Statut == "Traité")
+                            {
+                                <span class="badge bg-success">Traité</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">Nouveau</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-4">Créé le</dt>
+                        <dd class="col-sm-8">@Model.DateCreation.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                        @if (Model.DateTraitement.HasValue)
+                        {
+                            <dt class="col-sm-4">Traité le</dt>
+                            <dd class="col-sm-8">@Model.DateTraitement.Value.ToString("dd/MM/yyyy HH:mm")</dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">Demande client</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0 text-prewrap">@Model.DemandeTexte</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    @if (Model.Statut != "Traité")
+                    {
+                        <form asp-action="MarkTreated" asp-route-id="@Model.MessageId" method="post" class="d-grid">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-primary">
+                                Marquer traité
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="alert alert-success mb-0">Cet événement est déjà traité.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,46 @@
+@model IEnumerable<RealEstateAdmin.Models.BienImmobilier>
+
+@{
+    Layout = null;
+    ViewData["Title"] = "Export Biens";
+}
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <title>Biens</title>
+    <partial name="_ExportPrintStyles" />
+</head>
+<body>
+    <h1>Biens immobiliers</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Titre</th>
+                <th>Prix</th>
+                <th>Adresse</th>
+                <th>Surface</th>
+                <th>Statut</th>
+                <th>Publication</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var b in Model)
+            {
+                <tr>
+                    <td>@b.Id</td>
+                    <td>@b.Titre</td>
+                    <td>@b.Prix.ToString("N0")</td>
+                    <td>@b.Adresse</td>
+                    <td>@b.Surface</td>
+                    <td>@b.TypeTransaction</td>
+                    <td>@b.PublicationStatus</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <partial name="_AutoPrintScript" />
+</body>
+</html>

@@ -1,0 +1,29 @@
+@using Microsoft.AspNetCore.Identity
+@using RealEstateAdmin.Models
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+<ul class="navbar-nav">
+@if (SignInManager.IsSignedIn(User))
+{
+    <li class="nav-item">
+        <a class="nav-link text-dark" asp-controller="Dashboard" asp-action="Index" title="Aller au tableau de bord">
+            Bonjour @(User.Identity?.Name ?? "Utilisateur")
+        </a>
+    </li>
+    <li class="nav-item">
+        <form class="form-inline" asp-controller="Account" asp-action="Logout" method="post">
+            <button type="submit" class="nav-link btn btn-link text-dark border-0">Déconnexion</button>
+        </form>
+    </li>
+}
+else
+{
+    <li class="nav-item">
+        <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Inscription</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Connexion</a>
+    </li>
+}
+</ul>

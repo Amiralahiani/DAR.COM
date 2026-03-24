@@ -1,0 +1,31 @@
+@{
+    ViewData["Title"] = "Confirmation email";
+    var succeeded = (bool?)ViewBag.ConfirmationSucceeded == true;
+}
+
+<div class="container">
+    <div class="row justify-content-center py-5">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4 text-center">
+                    @if (succeeded)
+                    {
+                        <h2 class="mb-3 text-success">Email confirmé</h2>
+                        <p>Votre compte est maintenant activé.</p>
+                        <a asp-action="Login" asp-route-returnUrl="@ViewBag.ReturnUrl" class="btn btn-primary">
+                            Se connecter
+                        </a>
+                    }
+                    else
+                    {
+                        <h2 class="mb-3 text-danger">Échec de confirmation</h2>
+                        <p>Le lien de confirmation est invalide ou expiré.</p>
+                        <a asp-action="Register" class="btn btn-outline-primary">
+                            Refaire une inscription
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,6 @@
+# Fichiers generes a ne pas pusher
+RealEstateAdmin-main/bin/
+RealEstateAdmin-main/obj/
+
+# Configuration locale de dev
+RealEstateAdmin-main/appsettings.Development.json

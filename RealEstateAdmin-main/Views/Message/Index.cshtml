@@ -1,0 +1,206 @@
+@model IEnumerable<RealEstateAdmin.Models.Message>
+
+@{
+    ViewData["Title"] = "Gestion des messages";
+    var isSuperAdmin = User.IsInRole("SuperAdmin");
+    var assignableAdmins = ViewBag.AssignableAdmins as IReadOnlyList<RealEstateAdmin.Models.UserRoleViewModel>
+        ?? Array.Empty<RealEstateAdmin.Models.UserRoleViewModel>();
+
+    string? ReadMetadata(string? content, string key)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return null;
+        }
+
+        var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var line in lines)
+        {
+            if (line.StartsWith($"{key}=", StringComparison.OrdinalIgnoreCase))
+            {
+                return line[(key.Length + 1)..].Trim();
+            }
+        }
+
+        return null;
+    }
+
+    bool IsVisitOrMeetingMessage(RealEstateAdmin.Models.Message message)
+    {
+        var type = ReadMetadata(message.Contenu, "TYPE");
+        return string.Equals(type, "VISITE", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(type, "RDV_AGENT", StringComparison.OrdinalIgnoreCase);
+    }
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-gradient">
+            <i class="bi bi-envelope"></i> Gestion des messages
+        </h1>
+        <div class="d-flex gap-2 align-items-center">
+            <a asp-action="ExportCsv" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-filetype-csv"></i> CSV
+            </a>
+            <a asp-action="ExportPdf" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-file-earmark-pdf"></i> PDF
+            </a>
+            <span class="badge bg-primary fs-6">@Model.Count() message(s)</span>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (Model.Any())
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>
+                                <i class="bi bi-person"></i> Expéditeur
+                            </th>
+                            <th>
+                                <i class="bi bi-envelope-at"></i> Email
+                            </th>
+                            <th>
+                                <i class="bi bi-chat-text"></i> Sujet
+                            </th>
+                            <th>
+                                <i class="bi bi-signpost"></i> Destinataire
+                            </th>
+                            <th>
+                                <i class="bi bi-diagram-3"></i> Assignation
+                            </th>
+                            <th>
+                                <i class="bi bi-flag"></i> Statut
+                            </th>
+                            <th>
+                                <i class="bi bi-calendar"></i> Date
+                            </th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            var isVisitOrMeeting = IsVisitOrMeetingMessage(item);
+                            var assignmentStatus = ReadMetadata(item.Contenu, "ASSIGNMENT_STATUS");
+                            var assignedToName = ReadMetadata(item.Contenu, "ASSIGNED_TO_NAME");
+                            var isPendingSuperAdmin = string.Equals(assignmentStatus, "PENDING_SUPERADMIN", StringComparison.OrdinalIgnoreCase);
+
+                            <tr>
+                                <td>
+                                    <strong>@(item.NomUtilisateur ?? "Anonyme")</strong>
+                                </td>
+                                <td>
+                                    <a href="mailto:@item.Email" class="text-decoration-none">
+                                        <i class="bi bi-envelope"></i> @item.Email
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold">@item.Sujet</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">@item.Destinataire</span>
+                                </td>
+                                <td>
+                                    @if (isVisitOrMeeting)
+                                    {
+                                        if (isPendingSuperAdmin)
+                                        {
+                                            <span class="badge bg-warning text-dark">En attente SuperAdmin</span>
+                                        }
+                                        else if (!string.IsNullOrWhiteSpace(assignedToName))
+                                        {
+                                            <span class="badge bg-success">Assigné: @assignedToName</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Affectation non précisée</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.Statut == "Traité")
+                                    {
+                                        <span class="badge bg-success">Traité</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">Nouveau</span>
+                                    }
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        @item.DateCreation.ToString("dd/MM/yyyy HH:mm")
+                                    </small>
+                                </td>
+                                <td class="text-end">
+                                    @if (isSuperAdmin && isVisitOrMeeting && isPendingSuperAdmin)
+                                    {
+                                        <form asp-action="AssignToAdmin" asp-route-id="@item.Id" method="post" class="d-inline-flex align-items-center gap-1 me-2">
+                                            @Html.AntiForgeryToken()
+                                            <select name="adminUserId" class="form-select form-select-sm select-width-180" required>
+                                                <option value="">Choisir admin</option>
+                                                @foreach (var admin in assignableAdmins.Where(a => !a.IsSuspended))
+                                                {
+                                                    <option value="@admin.UserId">@admin.UserName</option>
+                                                }
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-outline-dark">
+                                                Assigner
+                                            </button>
+                                        </form>
+                                    }
+
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">
+                                            <i class="bi bi-eye"></i> Lire
+                                        </a>
+                                        <a asp-action="Reply" asp-route-id="@item.Id" class="btn btn-sm btn-success">
+                                            <i class="bi bi-reply"></i> Répondre
+                                        </a>
+                                        @if (item.Statut != "Traité")
+                                        {
+                                            <form asp-action="MarkTreated" asp-route-id="@item.Id" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                    Traiter
+                                                </button>
+                                            </form>
+                                        }
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox empty-state-icon"></i>
+                <h4 class="mt-3 text-muted">Aucun message</h4>
+                <p class="text-muted">Aucun message n'a été reçu pour le moment.</p>
+            </div>
+        </div>
+    }
+</div>

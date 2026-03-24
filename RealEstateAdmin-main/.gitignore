@@ -1,0 +1,6 @@
+# Fichiers generes a ne pas pusher
+bin/
+obj/
+
+# Configuration locale de dev
+appsettings.Development.json

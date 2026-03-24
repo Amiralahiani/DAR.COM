@@ -1,0 +1,68 @@
+@model RealEstateAdmin.Models.Message
+
+@{
+    ViewData["Title"] = "Nous contacter";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <h1 class="mb-4 text-gradient">
+                <i class="bi bi-chat-dots"></i> Nous contacter
+            </h1>
+
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle"></i> @TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            <div class="card">
+                <div class="card-body">
+                    <form asp-action="Create">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                        <div class="mb-3">
+                            <label asp-for="NomUtilisateur" class="form-label"></label>
+                            <input asp-for="NomUtilisateur" class="form-control" placeholder="Votre nom" />
+                            <span asp-validation-for="NomUtilisateur" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Email" class="form-label"></label>
+                            <input asp-for="Email" class="form-control" type="email" placeholder="votre@email.com" />
+                            <span asp-validation-for="Email" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Sujet" class="form-label"></label>
+                            <input asp-for="Sujet" class="form-control" placeholder="Sujet de votre message" />
+                            <span asp-validation-for="Sujet" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Destinataire" class="form-label"></label>
+                            <select asp-for="Destinataire" class="form-select">
+                                <option value="Administration">Administration</option>
+                                <option value="Agent">Agent</option>
+                            </select>
+                            <span asp-validation-for="Destinataire" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Contenu" class="form-label"></label>
+                            <textarea asp-for="Contenu" class="form-control" rows="6" placeholder="Votre message..."></textarea>
+                            <span asp-validation-for="Contenu" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-send"></i> Envoyer le message
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

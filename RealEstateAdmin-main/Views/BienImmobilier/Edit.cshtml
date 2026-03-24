@@ -1,0 +1,178 @@
+@model RealEstateAdmin.Models.BienImmobilier
+
+@{
+    ViewData["Title"] = "Modifier le bien immobilier";
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-gradient">
+            <i class="bi bi-pencil-square"></i> Modifier le bien immobilier
+        </h1>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour à la liste
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header card-header-gradient-ink">
+                    <h5 class="mb-0">
+                        <i class="bi bi-house-gear"></i> Informations du bien
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+                        <input type="hidden" asp-for="Id" />
+
+                        <div class="mb-4">
+                            <label asp-for="Titre" class="form-label fw-semibold">
+                                <i class="bi bi-tag"></i> @Html.DisplayNameFor(m => m.Titre)
+                            </label>
+                            <input asp-for="Titre" class="form-control form-control-lg" />
+                            <span asp-validation-for="Titre" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Description" class="form-label fw-semibold">
+                                <i class="bi bi-file-text"></i> @Html.DisplayNameFor(m => m.Description)
+                            </label>
+                            <textarea asp-for="Description" class="form-control" rows="6"></textarea>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label asp-for="TypeTransaction" class="form-label fw-semibold">
+                                    <i class="bi bi-tag-fill"></i> @Html.DisplayNameFor(m => m.TypeTransaction)
+                                </label>
+                                <select asp-for="TypeTransaction" class="form-select">
+                                    <option value="A Vendre">A Vendre</option>
+                                    <option value="A Louer">A Louer</option>
+                                    <option value="Acheté">Acheté</option>
+                                </select>
+                                <span asp-validation-for="TypeTransaction" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label asp-for="Prix" class="form-label fw-semibold">
+                                    <i class="bi bi-currency-exchange"></i> @Html.DisplayNameFor(m => m.Prix)
+                                </label>
+                                <div class="input-group">
+                                    <input asp-for="Prix" class="form-control" type="number" step="0.01" />
+                                    <span class="input-group-text">DT</span>
+                                </div>
+                                <span asp-validation-for="Prix" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Adresse" class="form-label fw-semibold">
+                                <i class="bi bi-geo-alt"></i> @Html.DisplayNameFor(m => m.Adresse)
+                            </label>
+                            <input asp-for="Adresse" class="form-control" />
+                            <span asp-validation-for="Adresse" class="text-danger small"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label asp-for="Surface" class="form-label fw-semibold">
+                                    <i class="bi bi-rulers"></i> @Html.DisplayNameFor(m => m.Surface)
+                                </label>
+                                <input asp-for="Surface" class="form-control" type="number" />
+                                <span asp-validation-for="Surface" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label asp-for="NombrePieces" class="form-label fw-semibold">
+                                    <i class="bi bi-door-open"></i> @Html.DisplayNameFor(m => m.NombrePieces)
+                                </label>
+                                <input asp-for="NombrePieces" class="form-control" type="number" />
+                                <span asp-validation-for="NombrePieces" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="ImageUrl" class="form-label fw-semibold">
+                                <i class="bi bi-image"></i> @Html.DisplayNameFor(m => m.ImageUrl)
+                            </label>
+                            <input asp-for="ImageUrl" class="form-control" type="url" placeholder="https://exemple.com/image.jpg" />
+                            <span asp-validation-for="ImageUrl" class="text-danger small"></span>
+                            <small class="form-text text-muted">Image principale.</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="ImageUrlsInput" class="form-label fw-semibold">
+                                <i class="bi bi-images"></i> @Html.DisplayNameFor(m => m.ImageUrlsInput)
+                            </label>
+                            <textarea asp-for="ImageUrlsInput" class="form-control" rows="3" placeholder="Une URL par ligne"></textarea>
+                            <small class="form-text text-muted">Remplace la galerie existante si renseigné.</small>
+                        </div>
+
+                        @if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
+                        {
+                            <div class="mb-4">
+                                <label asp-for="PublicationStatus" class="form-label fw-semibold">
+                                    <i class="bi bi-flag"></i> @Html.DisplayNameFor(m => m.PublicationStatus)
+                                </label>
+                                <select asp-for="PublicationStatus" class="form-select">
+                                    <option>En attente</option>
+                                    <option>Publié</option>
+                                    <option>Refusé</option>
+                                </select>
+                            </div>
+                            <div class="mb-4">
+                                <label asp-for="StatutCommercial" class="form-label fw-semibold">
+                                    <i class="bi bi-activity"></i> @Html.DisplayNameFor(m => m.StatutCommercial)
+                                </label>
+                                <select asp-for="StatutCommercial" class="form-select">
+                                    <option value="Disponible">Disponible</option>
+                                    <option value="Réservé">Réservé</option>
+                                    <option value="Vendu">Vendu</option>
+                                </select>
+                            </div>
+                        }
+
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Enregistrer
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightbulb"></i> Conseils
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            <strong>Qualité :</strong> Vérifiez les images et la description
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            <strong>Prix :</strong> Ajustez selon le marché local
+                        </li>
+                        <li class="mb-0">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            <strong>Publication :</strong> Publiez quand tout est prêt
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -1,0 +1,149 @@
+@model IEnumerable<RealEstateAdmin.Models.SaleTransaction>
+
+@{
+    ViewData["Title"] = "Gestion des ventes";
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-gradient">
+            <i class="bi bi-cash-stack"></i> Gestion des ventes
+        </h1>
+        <div class="d-flex gap-2">
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="bi bi-journal-plus"></i> Saisie manuelle
+            </a>
+            <a asp-action="ExportCsv" class="btn btn-outline-primary">
+                <i class="bi bi-filetype-csv"></i> CSV
+            </a>
+            <a asp-action="ExportPdf" class="btn btn-outline-primary">
+                <i class="bi bi-file-earmark-pdf"></i> PDF
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card primary">
+                <h2 class="stat-number">@ViewBag.TotalSales</h2>
+                <p class="stat-label">Transactions</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card success">
+                <h2 class="stat-number">@ViewBag.TotalAmount DT</h2>
+                <p class="stat-label">Montant total</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card warning">
+                <h2 class="stat-number">@ViewBag.PaidAmount DT</h2>
+                <p class="stat-label">Montant payé</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form asp-action="Index" method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Modalité de paiement</label>
+                    <select class="form-select" name="paymentMethod">
+                        <option value="">Toutes</option>
+                        @foreach (var method in (string[])ViewBag.PaymentMethods)
+                        {
+                            <option value="@method" selected="@(ViewBag.PaymentMethod == method)">@method</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Statut de paiement</label>
+                    <select class="form-select" name="paymentStatus">
+                        <option value="">Tous</option>
+                        @foreach (var status in (string[])ViewBag.PaymentStatuses)
+                        {
+                            <option value="@status" selected="@(ViewBag.PaymentStatus == status)">@status</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">Filtrer</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Réinitialiser</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Bien</th>
+                        <th>Acheteur</th>
+                        <th>Vendeur</th>
+                        <th>Montant</th>
+                        <th>Date</th>
+                        <th>Paiement</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.Id</td>
+                            <td>@(item.BienImmobilier?.Titre ?? "-")</td>
+                            <td>@(item.Buyer?.Email ?? "-")</td>
+                            <td>@(item.Seller?.Email ?? "-")</td>
+                            <td>@item.Amount.ToString("N2") DT</td>
+                            <td>@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@item.PaymentMethod</td>
+                            <td>
+                                <span class="badge @(item.PaymentStatus == "Payé" ? "bg-success" : item.PaymentStatus == "Refusé" ? "bg-danger" : "bg-warning text-dark")">
+                                    @item.PaymentStatus
+                                </span>
+                            </td>
+                            <td>
+                                <form asp-action="UpdatePayment" method="post" class="d-flex gap-2">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <select name="paymentMethod" class="form-select form-select-sm select-width-130">
+                                        @foreach (var method in (string[])ViewBag.PaymentMethods)
+                                        {
+                                            <option value="@method" selected="@(item.PaymentMethod == method)">@method</option>
+                                        }
+                                    </select>
+                                    <select name="paymentStatus" class="form-select form-select-sm select-width-130">
+                                        @foreach (var status in (string[])ViewBag.PaymentStatuses)
+                                        {
+                                            <option value="@status" selected="@(item.PaymentStatus == status)">@status</option>
+                                        }
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-primary">Mettre à jour</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

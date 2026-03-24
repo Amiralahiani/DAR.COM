@@ -1,0 +1,279 @@
+@model RealEstateAdmin.Services.ShopIndexData
+
+@{
+    ViewData["Title"] = "Shop Immobilier";
+    var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var totalResults = Model.Biens.Count;
+}
+
+<div class="container shop-page">
+    <div class="card border-0 shadow-sm shop-hero mb-3">
+        <div class="card-body p-3 p-lg-4 d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-2">
+            <div>
+                <h1 class="text-white mb-1">
+                    <i class="bi bi-buildings"></i> Shop DAR.COM
+                </h1>
+                <p class="mb-0 text-white-50">Découvrez les biens publiés et planifiez vos visites ou rendez-vous directement.</p>
+            </div>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <span class="shop-result-pill">@totalResults résultat@(totalResults > 1 ? "s" : "")</span>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    if (!User.IsInRole("Admin") && !User.IsInRole("SuperAdmin"))
+                    {
+                        <a asp-controller="BienImmobilier" asp-action="Create" class="btn btn-light">
+                            <i class="bi bi-plus-lg"></i> Publier un bien
+                        </a>
+                    }
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="~/BienImmobilier/Create" class="btn btn-light">
+                        <i class="bi bi-box-arrow-in-right"></i> Connexion
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header shop-filter-header">
+            <h5 class="mb-0 text-white"><i class="bi bi-funnel"></i> Filtres de recherche</h5>
+        </div>
+        <div class="card-body p-3">
+            <form asp-action="Index" method="get" class="row g-3">
+                <div class="col-md-6 col-xl-3">
+                    <label class="form-label">Localisation</label>
+                    <input type="text" class="form-control" name="adresse" value="@Model.Filter.Adresse" placeholder="Ville, quartier..." />
+                </div>
+                <div class="col-md-6 col-xl-3">
+                    <label class="form-label">Titre / mot-clé</label>
+                    <input type="text" class="form-control" name="titre" value="@Model.Filter.Titre" placeholder="Villa, Appartement..." />
+                </div>
+                <div class="col-md-6 col-xl-2">
+                    <label class="form-label">Prix min</label>
+                    <input type="number" class="form-control" name="prixMin" value="@Model.Filter.PrixMin" placeholder="0" />
+                </div>
+                <div class="col-md-6 col-xl-2">
+                    <label class="form-label">Prix max</label>
+                    <input type="number" class="form-control" name="prixMax" value="@Model.Filter.PrixMax" placeholder="Max" />
+                </div>
+                <div class="col-md-6 col-xl-2">
+                    <label class="form-label">Surface min</label>
+                    <input type="number" class="form-control" name="surfaceMin" value="@Model.Filter.SurfaceMin" placeholder="0" />
+                </div>
+                <div class="col-md-6 col-xl-2">
+                    <label class="form-label">Surface max</label>
+                    <input type="number" class="form-control" name="surfaceMax" value="@Model.Filter.SurfaceMax" placeholder="Max" />
+                </div>
+                <div class="col-md-6 col-xl-2">
+                    <label class="form-label">Type</label>
+                    <select class="form-select" name="type">
+                        <option value="">Tous</option>
+                        @foreach (var typeItem in Model.Types)
+                        {
+                            <option value="@typeItem" selected="@(Model.Filter.Type == typeItem)">@typeItem</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6 col-xl-2">
+                    <label class="form-label">Statut</label>
+                    <select class="form-select" name="statut">
+                        <option value="">Tous</option>
+                        @foreach (var statusItem in Model.Statuses)
+                        {
+                            <option value="@statusItem" selected="@(Model.Filter.Statut == statusItem)">@statusItem</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12 d-flex justify-content-end gap-2 mt-2">
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Réinitialiser</a>
+                    <button type="submit" class="btn btn-primary btn-sm px-3">
+                        <i class="bi bi-search"></i> Filtrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (Model.Biens.Any())
+    {
+        <div class="shop-list d-flex flex-column gap-3">
+            @foreach (var item in Model.Biens)
+            {
+                var canInteract = User.Identity?.IsAuthenticated == true && item.UserId != currentUserId;
+                var canReserveVisit = canInteract && item.StatutCommercial == "Disponible";
+                var canMeeting = canInteract && item.StatutCommercial != "Vendu";
+                var canInterest = canInteract && item.StatutCommercial != "Vendu";
+                var slots = Model.AvailableVisitSlotsByBien.TryGetValue(item.Id, out var slotList)
+                    ? slotList
+                    : Array.Empty<DateTime>();
+                var agentDisplay = Model.AgentDisplayByBien.TryGetValue(item.Id, out var agentName)
+                    ? agentName
+                    : "Agent DAR.COM";
+                var scheduleCollapseId = $"shopSchedule{item.Id}";
+
+                <article class="card border-0 shadow-sm shop-row">
+                    <div class="row g-0">
+                        <div class="col-lg-3 col-md-4">
+                            <a asp-controller="BienImmobilier" asp-action="Details" asp-route-id="@item.Id" class="text-decoration-none">
+                                <div class="shop-row-media">
+                                    @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                                    {
+                                        <img src="@item.ImageUrl" alt="@item.Titre" class="shop-row-image" />
+                                    }
+                                    else
+                                    {
+                                        <div class="shop-row-placeholder">
+                                            <i class="bi bi-image"></i>
+                                        </div>
+                                    }
+                                </div>
+                            </a>
+                        </div>
+
+                        <div class="col-lg-6 col-md-8">
+                            <div class="shop-row-main">
+                                <div class="shop-row-head mb-2">
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <span class="badge rounded-pill bg-dark-subtle text-dark">@item.TypeTransaction</span>
+                                        <span class="badge rounded-pill @(item.StatutCommercial == "Vendu" ? "bg-secondary" : item.StatutCommercial == "Réservé" ? "bg-warning text-dark" : "bg-success")">
+                                            @item.StatutCommercial
+                                        </span>
+                                    </div>
+                                    <div class="shop-price">@item.Prix.ToString("N2") DT</div>
+                                </div>
+
+                                <h5 class="shop-title mb-2" title="@item.Titre">@item.Titre</h5>
+
+                                <div class="shop-meta mb-2">
+                                    <span><i class="bi bi-geo-alt"></i> @(item.Adresse ?? "Adresse non précisée")</span>
+                                </div>
+                                <div class="shop-meta mb-2">
+                                    <span><i class="bi bi-aspect-ratio"></i> @(item.Surface ?? 0) m²</span>
+                                    <span><i class="bi bi-door-closed"></i> @(item.NombrePieces ?? 0) pièces</span>
+                                </div>
+
+                                <div class="shop-agent">
+                                    <div class="shop-agent-owner">
+                                        <i class="bi bi-person-circle"></i>
+                                        <span>Publié par <strong>@(item.User?.Nom ?? item.User?.UserName ?? "Inconnu")</strong></span>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar-event"></i> Créneaux gérés par <strong>@agentDisplay</strong>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-3 col-12">
+                            <div class="shop-row-actions">
+                                <a asp-controller="BienImmobilier" asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">
+                                    Voir les détails
+                                </a>
+
+                                @if (canInterest)
+                                {
+                                    <form asp-action="ExpressInterest" asp-route-id="@item.Id" method="post" class="d-grid">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-primary btn-sm">Je suis intéressé</button>
+                                    </form>
+                                }
+
+                                @if (canReserveVisit || canMeeting)
+                                {
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#@scheduleCollapseId" aria-expanded="false" aria-controls="@scheduleCollapseId">
+                                        Choisir un créneau
+                                    </button>
+                                    <div class="collapse" id="@scheduleCollapseId">
+                                        <div class="shop-schedule-panel">
+                                            @if (slots.Any())
+                                            {
+                                                @if (canReserveVisit)
+                                                {
+                                                    <form asp-action="ReserveVisit" asp-route-id="@item.Id" method="post" class="d-grid gap-2 mb-2">
+                                                        @Html.AntiForgeryToken()
+                                                        <label class="small fw-semibold mb-0">Réserver une visite</label>
+                                                        <select name="visitSlot" class="form-select form-select-sm">
+                                                            @foreach (var slot in slots.Take(8))
+                                                            {
+                                                                <option value="@slot.ToString("s")">@slot.ToString("dddd dd/MM HH:mm")</option>
+                                                            }
+                                                        </select>
+                                                        <button type="submit" class="btn btn-outline-primary btn-sm">Valider la visite</button>
+                                                    </form>
+                                                }
+
+                                                @if (canMeeting)
+                                                {
+                                                    <form asp-action="RequestMeeting" asp-route-id="@item.Id" method="post" class="d-grid gap-2">
+                                                        @Html.AntiForgeryToken()
+                                                        <label class="small fw-semibold mb-0">Rendez-vous avec un agent</label>
+                                                        <select name="meetingSlot" class="form-select form-select-sm">
+                                                            @foreach (var slot in slots.Take(8))
+                                                            {
+                                                                <option value="@slot.ToString("s")">@slot.ToString("dddd dd/MM HH:mm")</option>
+                                                            }
+                                                        </select>
+                                                        <button type="submit" class="btn btn-outline-secondary btn-sm">Valider le rendez-vous</button>
+                                                    </form>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <div class="alert alert-light border mb-0 small">
+                                                    Aucun créneau libre actuellement pour cet agent.
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+
+                                @if (User.Identity?.IsAuthenticated == true && item.UserId == currentUserId)
+                                {
+                                    <div class="shop-note small text-muted">
+                                        <i class="bi bi-info-circle"></i> Ce bien vous appartient. Vous ne pouvez pas réserver dessus.
+                                    </div>
+                                }
+                                else if (User.Identity?.IsAuthenticated != true)
+                                {
+                                    <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="~/Shop/Index" class="btn btn-light border btn-sm">
+                                        Se connecter pour réserver
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body py-5 text-center">
+                <i class="bi bi-search fs-1 text-muted"></i>
+                <h3 class="mt-3">Aucun bien trouvé</h3>
+                <p class="text-muted mb-4">Ajustez vos filtres ou publiez une nouvelle annonce.</p>
+                <a asp-controller="BienImmobilier" asp-action="Create" class="btn btn-primary">
+                    Publier une annonce
+                </a>
+            </div>
+        </div>
+    }
+</div>

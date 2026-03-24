@@ -1,0 +1,196 @@
+@model RealEstateAdmin.Models.BienImmobilier
+
+@{
+    ViewData["Title"] = "Créer un bien immobilier";
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-gradient">
+            <i class="bi bi-plus-circle"></i> Créer un bien immobilier
+        </h1>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour à la liste
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header card-header-gradient-primary">
+                    <h5 class="mb-0">
+                        <i class="bi bi-house-heart"></i> Informations du bien immobilier
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+                        
+                        <div class="mb-4">
+                            <label asp-for="Titre" class="form-label fw-semibold">
+                                <i class="bi bi-tag"></i> @Html.DisplayNameFor(m => m.Titre)
+                            </label>
+                            <input asp-for="Titre" class="form-control form-control-lg" placeholder="Ex: Villa moderne avec piscine" />
+                            <span asp-validation-for="Titre" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Description" class="form-label fw-semibold">
+                                <i class="bi bi-file-text"></i> @Html.DisplayNameFor(m => m.Description)
+                            </label>
+                            <textarea asp-for="Description" class="form-control" rows="6" placeholder="Décrivez votre bien immobilier en détail..."></textarea>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                            <small class="form-text text-muted">
+                                <i class="bi bi-info-circle"></i> Décrivez les caractéristiques, avantages et emplacement du bien
+                            </small>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label asp-for="Prix" class="form-label fw-semibold">
+                                    <i class="bi bi-currency-exchange"></i> @Html.DisplayNameFor(m => m.Prix)
+                                </label>
+                                <div class="input-group">
+                                    <input asp-for="Prix" class="form-control form-control-lg" type="number" step="0.01" placeholder="0.00" />
+                                    <span class="input-group-text">DT</span>
+                                </div>
+                                <span asp-validation-for="Prix" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label asp-for="Surface" class="form-label fw-semibold">
+                                    <i class="bi bi-rulers"></i> @Html.DisplayNameFor(m => m.Surface)
+                                </label>
+                                <div class="input-group">
+                                    <input asp-for="Surface" class="form-control form-control-lg" type="number" placeholder="0" />
+                                    <span class="input-group-text">m²</span>
+                                </div>
+                                <span asp-validation-for="Surface" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label asp-for="NombrePieces" class="form-label fw-semibold">
+                                    <i class="bi bi-door-open"></i> @Html.DisplayNameFor(m => m.NombrePieces)
+                                </label>
+                                <input asp-for="NombrePieces" class="form-control form-control-lg" type="number" placeholder="Nombre de pièces" />
+                                <span asp-validation-for="NombrePieces" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label asp-for="Adresse" class="form-label fw-semibold">
+                                    <i class="bi bi-geo-alt"></i> @Html.DisplayNameFor(m => m.Adresse)
+                                </label>
+                                <input asp-for="Adresse" class="form-control form-control-lg" placeholder="Ex: Avenue Habib Bourguiba, Tunis" />
+                                <span asp-validation-for="Adresse" class="text-danger small"></span>
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle"></i> Indiquez l'adresse complète en Tunisie
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="ImageUrl" class="form-label fw-semibold">
+                                <i class="bi bi-image"></i> @Html.DisplayNameFor(m => m.ImageUrl)
+                            </label>
+                            <input asp-for="ImageUrl" class="form-control form-control-lg" type="url" placeholder="https://exemple.com/image.jpg" />
+                            <span asp-validation-for="ImageUrl" class="text-danger small"></span>
+                            <small class="form-text text-muted">
+                                <i class="bi bi-link-45deg"></i> Entrez l'URL de l'image du bien immobilier (format: https://...)
+                            </small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="ImageUrlsInput" class="form-label fw-semibold">
+                                <i class="bi bi-images"></i> @Html.DisplayNameFor(m => m.ImageUrlsInput)
+                            </label>
+                            <textarea asp-for="ImageUrlsInput" class="form-control" rows="3" placeholder="Une URL par ligne"></textarea>
+                            <small class="form-text text-muted">
+                                Ajoutez plusieurs images (URLs) séparées par des retours à la ligne.
+                            </small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="TypeTransaction" class="form-label fw-semibold">
+                                <i class="bi bi-tags"></i> @Html.DisplayNameFor(m => m.TypeTransaction)
+                            </label>
+                            <select asp-for="TypeTransaction" class="form-select">
+                                <option value="A Vendre">A Vendre</option>
+                                <option value="A Louer">A Louer</option>
+                            </select>
+                        </div>
+
+                        @if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
+                        {
+                            <div class="mb-4">
+                                <label asp-for="PublicationStatus" class="form-label fw-semibold">
+                                    <i class="bi bi-flag"></i> @Html.DisplayNameFor(m => m.PublicationStatus)
+                                </label>
+                                <select asp-for="PublicationStatus" class="form-select">
+                                    <option>En attente</option>
+                                    <option>Publié</option>
+                                    <option>Refusé</option>
+                                </select>
+                            </div>
+                            <div class="mb-4">
+                                <label asp-for="StatutCommercial" class="form-label fw-semibold">
+                                    <i class="bi bi-activity"></i> @Html.DisplayNameFor(m => m.StatutCommercial)
+                                </label>
+                                <select asp-for="StatutCommercial" class="form-select">
+                                    <option value="Disponible">Disponible</option>
+                                    <option value="Réservé">Réservé</option>
+                                    <option value="Vendu">Vendu</option>
+                                </select>
+                            </div>
+                        }
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle"></i> Créer le bien
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-x-circle"></i> Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightbulb"></i> Conseils
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            <strong>Titre accrocheur :</strong> Utilisez un titre descriptif et attractif
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            <strong>Description détaillée :</strong> Mentionnez les points forts et caractéristiques
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            <strong>Prix réaliste :</strong> Fixez un prix compétitif selon le marché
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            <strong>Bonne image :</strong> Utilisez une image de qualité pour attirer les clients
+                        </li>
+                        <li class="mb-0">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            <strong>Adresse précise :</strong> Indiquez l'adresse complète en Tunisie
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

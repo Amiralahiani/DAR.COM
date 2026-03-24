@@ -1,0 +1,41 @@
+@model RealEstateAdmin.Models.UserRoleViewModel
+
+@{
+    ViewData["Title"] = "Supprimer un utilisateur";
+}
+
+<div class="container">
+    <h1 class="mb-4 text-danger">
+        <i class="bi bi-trash"></i> Supprimer un utilisateur
+    </h1>
+
+    <div class="alert alert-warning">
+        Cette action est irréversible.
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Nom</dt>
+                <dd class="col-sm-9">@Model.UserName</dd>
+
+                <dt class="col-sm-3">Email</dt>
+                <dd class="col-sm-9">@Model.Email</dd>
+
+                <dt class="col-sm-3">Rôle</dt>
+                <dd class="col-sm-9">@Model.CurrentRole</dd>
+            </dl>
+
+            <form asp-action="Delete" method="post">
+                <input type="hidden" name="id" value="@Model.UserId" />
+                @Html.AntiForgeryToken()
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Confirmer la suppression
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

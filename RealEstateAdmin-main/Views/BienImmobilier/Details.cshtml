@@ -1,0 +1,130 @@
+@model RealEstateAdmin.Models.BienImmobilier
+
+@{
+    ViewData["Title"] = "Détails du bien";
+}
+
+<div class="container">
+    <h1 class="mb-4 text-gradient">
+        <i class="bi bi-house-door"></i> Détails du bien
+    </h1>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            @if (!string.IsNullOrEmpty(Model.ImageUrl))
+            {
+                <div class="card">
+                    <img src="@Model.ImageUrl" alt="@Model.Titre" class="card-img-top detail-main-image" />
+                </div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="property-image property-image-tall">
+                        <i class="bi bi-house-heart property-empty-icon-large"></i>
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="card-title mb-4">@Html.DisplayFor(model => model.Titre)</h2>
+                    
+                    <div class="property-price mb-4">
+                        @Model.Prix.ToString("N2") DT
+                    </div>
+
+                    <dl class="row mb-4">
+                        @if (!string.IsNullOrEmpty(Model.Description))
+                        {
+                            <dt class="col-sm-4">Description</dt>
+                            <dd class="col-sm-8">@Html.DisplayFor(model => model.Description)</dd>
+                        }
+                        
+                        @if (!string.IsNullOrEmpty(Model.Adresse))
+                        {
+                            <dt class="col-sm-4">
+                                <i class="bi bi-geo-alt"></i> Adresse
+                            </dt>
+                            <dd class="col-sm-8">@Html.DisplayFor(model => model.Adresse)</dd>
+                        }
+                        
+                        @if (Model.Surface.HasValue)
+                        {
+                            <dt class="col-sm-4">
+                                <i class="bi bi-rulers"></i> Surface
+                            </dt>
+                            <dd class="col-sm-8">@Html.DisplayFor(model => model.Surface) m²</dd>
+                        }
+                        
+                        @if (Model.NombrePieces.HasValue)
+                        {
+                            <dt class="col-sm-4">
+                                <i class="bi bi-door-open"></i> Pièces
+                            </dt>
+                            <dd class="col-sm-8">@Html.DisplayFor(model => model.NombrePieces)</dd>
+                        }
+
+                        <dt class="col-sm-4">
+                            <i class="bi bi-tags"></i> Type
+                        </dt>
+                        <dd class="col-sm-8">@Model.TypeTransaction</dd>
+
+                        <dt class="col-sm-4">
+                            <i class="bi bi-activity"></i> Statut commercial
+                        </dt>
+                        <dd class="col-sm-8">@Model.StatutCommercial</dd>
+
+                        <dt class="col-sm-4">
+                            <i class="bi bi-flag"></i> Publication
+                        </dt>
+                        <dd class="col-sm-8">@Model.PublicationStatus</dd>
+                    </dl>
+
+                    <div class="mt-4">
+                        @if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
+                        {
+                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning me-2">
+                                <i class="bi bi-pencil"></i> Modifier
+                            </a>
+                        }
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Retour à la liste
+                            </a>
+                        }
+                        else
+                        {
+                            <a asp-controller="Shop" asp-action="Index" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Retour au shop
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Images != null && Model.Images.Any())
+    {
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-images"></i> Galerie
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    @foreach (var img in Model.Images)
+                    {
+                        <div class="col-md-4">
+                            <img src="@img.Url" alt="Image bien" class="img-fluid rounded" />
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>

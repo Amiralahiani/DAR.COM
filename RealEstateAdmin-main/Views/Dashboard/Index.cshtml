@@ -1,0 +1,314 @@
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-gradient">
+            <i class="bi bi-speedometer2"></i> Dashboard
+        </h1>
+    </div>
+
+    <!-- KPIs -->
+    <div class="mb-4">
+        <h2 class="mb-3">Statistiques essentielles</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="stat-card primary">
+                    <div class="mb-3">
+                        <i class="bi bi-house-heart icon-stat-xl icon-gold"></i>
+                    </div>
+                    <h2 class="stat-number">@ViewBag.TotalBiens</h2>
+                    <p class="stat-label">@(ViewBag.IsAdmin == true ? "Total des biens" : "Mes biens")</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card success">
+                    <div class="mb-3">
+                        <i class="bi bi-cash-coin icon-stat-xl icon-emerald"></i>
+                    </div>
+                    <h2 class="stat-number">@ViewBag.AvgPrice</h2>
+                    <p class="stat-label">Prix moyen</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card warning">
+                    <div class="mb-3">
+                        <i class="bi bi-aspect-ratio icon-stat-xl icon-terracotta"></i>
+                    </div>
+                    <h2 class="stat-number">@ViewBag.AvgPricePerM2</h2>
+                    <p class="stat-label">Prix moyen / m²</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (ViewBag.IsAdmin == true)
+    {
+        <div class="mb-4">
+            <h2 class="mb-3">KPIs ventes</h2>
+            <div class="row g-4">
+                <div class="col-md-3">
+                    <div class="stat-card primary">
+                        <div class="mb-3">
+                            <i class="bi bi-receipt-cutoff icon-stat-lg"></i>
+                        </div>
+                        <h2 class="stat-number">@ViewBag.TotalTransactions</h2>
+                        <p class="stat-label">Transactions</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card success">
+                        <div class="mb-3">
+                            <i class="bi bi-currency-dollar icon-stat-lg"></i>
+                        </div>
+                        <h2 class="stat-number">@ViewBag.TotalRevenue</h2>
+                        <p class="stat-label">Revenus</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card warning">
+                        <div class="mb-3">
+                            <i class="bi bi-graph-up-arrow icon-stat-lg"></i>
+                        </div>
+                        <h2 class="stat-number">@ViewBag.ConversionRate</h2>
+                        <p class="stat-label">Taux de conversion</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card primary">
+                        <div class="mb-3">
+                            <i class="bi bi-check2-circle icon-stat-lg"></i>
+                        </div>
+                        <h2 class="stat-number">@ViewBag.PaidTransactions</h2>
+                        <p class="stat-label">Paiements validés</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="mb-4">
+            <h2 class="mb-3">Mon activité</h2>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="stat-card primary">
+                        <h2 class="stat-number">@ViewBag.MySales</h2>
+                        <p class="stat-label">Biens vendus</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card success">
+                        <h2 class="stat-number">@ViewBag.MyPurchases</h2>
+                        <p class="stat-label">Biens achetés</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card warning">
+                        <h2 class="stat-number">@ViewBag.MyTransactionAmount</h2>
+                        <p class="stat-label">Total transactions</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="chart-shell h-100">
+                <div class="chart-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-bar-chart"></i> Répartition des biens par gamme de prix
+                    </h5>
+                    <span class="chart-note">Tranches dynamiques selon vos données</span>
+                </div>
+                <div class="card-body">
+                    <canvas id="prixChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="chart-shell h-100">
+                <div class="chart-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-geo-alt"></i> Top zones (nombre de biens)
+                    </h5>
+                    <span class="chart-note">Zones détectées : @ViewBag.ZoneCount</span>
+                </div>
+                <div class="card-body">
+                    <canvas id="zoneChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="mb-3">Détails par zone</h2>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-list-ul"></i> Statistiques par zone
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Zone</th>
+                            <th>Biens</th>
+                            <th>Prix moyen (DT)</th>
+                            <th>Prix/m² (DT)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var zone in (IEnumerable<dynamic>)ViewBag.ZoneStats)
+                        {
+                            <tr>
+                                <td>@zone.Zone</td>
+                                <td>@zone.Count</td>
+                                <td>@zone.AvgPrice.ToString("N0")</td>
+                                <td>@(((double)zone.AvgPricePerM2).ToString("N0"))</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> Informations
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">
+                        <strong>Bienvenue sur votre tableau de bord !</strong>
+                    </p>
+                    <p class="text-muted mb-0">
+                        @if (ViewBag.IsAdmin == true)
+                        {
+                            <text>Gérez efficacement tous les biens immobiliers, suivez les statistiques globales et restez organisé avec notre plateforme moderne.</text>
+                        }
+                        else
+                        {
+                            <text>Gérez efficacement vos biens immobiliers personnels, suivez vos statistiques et restez organisé avec notre plateforme moderne.</text>
+                        }
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const ctx = document.getElementById('prixChart').getContext('2d');
+        const biensParPrix = @Html.Raw(Json.Serialize(ViewBag.BiensParPrix));
+        
+        const labels = biensParPrix.map(item => item.categorie || item.Categorie);
+        const data = biensParPrix.map(item => item.count || item.Count);
+
+        const zoneStats = @Html.Raw(Json.Serialize(ViewBag.ZoneStats));
+        const zoneLabels = zoneStats.map(z => z.zone || z.Zone);
+        const zoneCounts = zoneStats.map(z => z.count || z.Count);
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Nombre de biens',
+                    data: data,
+                    backgroundColor: [
+                        'rgba(214, 165, 71, 0.75)',
+                        'rgba(31, 143, 122, 0.75)',
+                        'rgba(192, 86, 58, 0.75)',
+                        'rgba(23, 49, 58, 0.75)',
+                        'rgba(242, 205, 122, 0.75)'
+                    ],
+                    borderColor: [
+                        'rgba(214, 165, 71, 1)',
+                        'rgba(31, 143, 122, 1)',
+                        'rgba(192, 86, 58, 1)',
+                        'rgba(23, 49, 58, 1)',
+                        'rgba(242, 205, 122, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        },
+                        grid: {
+                            color: 'rgba(12, 27, 34, 0.08)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+        const zoneCtx = document.getElementById('zoneChart').getContext('2d');
+        new Chart(zoneCtx, {
+            type: 'bar',
+            data: {
+                labels: zoneLabels,
+                datasets: [{
+                    label: 'Nombre de biens',
+                    data: zoneCounts,
+                    backgroundColor: 'rgba(31, 143, 122, 0.7)',
+                    borderColor: 'rgba(31, 143, 122, 1)',
+                    borderWidth: 2,
+                    borderRadius: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        },
+                        grid: {
+                            color: 'rgba(12, 27, 34, 0.08)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+    </script>
+}

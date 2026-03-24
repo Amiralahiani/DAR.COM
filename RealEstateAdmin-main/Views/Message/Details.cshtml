@@ -1,0 +1,109 @@
+@model RealEstateAdmin.Models.Message
+
+@{
+    ViewData["Title"] = "Détails du message";
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-gradient">
+            <i class="bi bi-envelope-open"></i> Détails du message
+        </h1>
+        <a asp-action="Index" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header card-header-gradient-primary">
+                    <h5 class="mb-0">
+                        <i class="bi bi-chat-text"></i> @Model.Sujet
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <p class="text-muted mb-0 text-prewrap">@Model.Contenu</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> Informations
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <dl class="mb-0">
+                        <dt class="mb-2">
+                            <i class="bi bi-person"></i> Expéditeur
+                        </dt>
+                        <dd class="mb-3">
+                            <strong>@(Model.NomUtilisateur ?? "Anonyme")</strong>
+                        </dd>
+                        
+                        <dt class="mb-2">
+                            <i class="bi bi-envelope-at"></i> Email
+                        </dt>
+                        <dd class="mb-3">
+                            <a href="mailto:@Model.Email" class="text-decoration-none">
+                                @Model.Email
+                            </a>
+                        </dd>
+                        
+                        <dt class="mb-2">
+                            <i class="bi bi-calendar"></i> Date
+                        </dt>
+                        <dd class="mb-0">
+                            @Model.DateCreation.ToString("dd MMMM yyyy à HH:mm")
+                        </dd>
+
+                        <dt class="mb-2 mt-3">
+                            <i class="bi bi-signpost"></i> Destinataire
+                        </dt>
+                        <dd class="mb-0">
+                            <span class="badge bg-secondary">@Model.Destinataire</span>
+                        </dd>
+
+                        <dt class="mb-2 mt-3">
+                            <i class="bi bi-flag"></i> Statut
+                        </dt>
+                        <dd class="mb-0">
+                            @if (Model.Statut == "Traité")
+                            {
+                                <span class="badge bg-success">Traité</span>
+                                @if (Model.DateTraitement.HasValue)
+                                {
+                                    <small class="text-muted d-block mt-1">Le @Model.DateTraitement.Value.ToString("dd/MM/yyyy HH:mm")</small>
+                                }
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">Nouveau</span>
+                            }
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="mailto:@Model.Email?subject=Re: @Model.Sujet" class="btn btn-success">
+                            <i class="bi bi-reply"></i> Répondre par email
+                        </a>
+                        <a asp-action="Reply" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                            <i class="bi bi-chat-dots"></i> Répondre via le système
+                        </a>
+                        <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger">
+                            <i class="bi bi-trash"></i> Supprimer
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

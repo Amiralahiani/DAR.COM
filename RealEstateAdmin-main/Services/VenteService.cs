@@ -7,7 +7,7 @@ namespace RealEstateAdmin.Services
 {
     public class VenteService : IVenteService
     {
-        private static readonly string[] PaymentMethods = { "Virement", "Chèque", "Crédit", "Espèces" };
+        private static readonly string[] DefaultPaymentMethods = { "Virement", "Chèque", "Crédit", "Espèces" };
         private static readonly string[] PaymentStatuses = { "En attente", "Payé", "Refusé" };
         private static readonly string[] TransactionStatuses = { "En cours", "Finalisée", "Annulée" };
 
@@ -28,6 +28,28 @@ namespace RealEstateAdmin.Services
             _auditLogService = auditLogService;
         }
 
+        // Payment methods are now configurable via the database settings table if present.
+        // Fallback to default list defined above.
+        private async Task<string[]> GetPaymentMethodsAsync()
+        {
+            try
+            {
+                // If there's a simple Settings table, try to read a semicolon separated value
+                // Try reading from AppSettings table if present
+                var setting = await _context.AppSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Key == "PaymentMethods");
+                if (setting != null && !string.IsNullOrWhiteSpace(setting.Value))
+                {
+                    return setting.Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                }
+            }
+            catch
+            {
+                // ignore and fallback
+            }
+
+            return DefaultPaymentMethods;
+        }
+
         public async Task<SalesIndexData> GetIndexDataAsync(SalesFilter filter)
         {
             var query = _context.Sales
@@ -36,7 +58,9 @@ namespace RealEstateAdmin.Services
                 .Include(s => s.Seller)
                 .AsQueryable();
 
-            if (!string.IsNullOrWhiteSpace(filter.PaymentMethod) && PaymentMethods.Contains(filter.PaymentMethod))
+            var paymentMethods = await GetPaymentMethodsAsync();
+
+            if (!string.IsNullOrWhiteSpace(filter.PaymentMethod) && paymentMethods.Contains(filter.PaymentMethod))
             {
                 query = query.Where(s => s.PaymentMethod == filter.PaymentMethod);
             }
@@ -52,7 +76,7 @@ namespace RealEstateAdmin.Services
             {
                 Sales = sales,
                 Filter = filter,
-                PaymentMethods = PaymentMethods,
+                PaymentMethods = paymentMethods,
                 PaymentStatuses = PaymentStatuses,
                 TotalSales = sales.Count,
                 TotalAmount = sales.Sum(s => s.Amount).ToString("N2"),
@@ -86,12 +110,14 @@ namespace RealEstateAdmin.Services
                 })
                 .ToList();
 
+            var paymentMethods = await GetPaymentMethodsAsync();
+
             return new SalesCreateData
             {
                 Input = input ?? new SalesCreateInput(),
                 Biens = biens,
                 Users = users,
-                PaymentMethods = PaymentMethods,
+                PaymentMethods = paymentMethods,
                 PaymentStatuses = PaymentStatuses,
                 TransactionStatuses = TransactionStatuses
             };
@@ -104,7 +130,9 @@ namespace RealEstateAdmin.Services
                 return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "Le montant doit être supérieur à 0.");
             }
 
-            if (!PaymentMethods.Contains(input.PaymentMethod) || !PaymentStatuses.Contains(input.PaymentStatus))
+            var paymentMethods = await GetPaymentMethodsAsync();
+
+            if (!paymentMethods.Contains(input.PaymentMethod) || !PaymentStatuses.Contains(input.PaymentStatus))
             {
                 return ServiceResult<int>.Fail(ServiceErrorCode.BadRequest, "Mode ou statut de paiement invalide.");
             }
@@ -150,6 +178,7 @@ namespace RealEstateAdmin.Services
                 BienImmobilierId = input.BienImmobilierId,
                 BuyerId = string.IsNullOrWhiteSpace(input.BuyerId) ? null : input.BuyerId,
                 SellerId = string.IsNullOrWhiteSpace(input.SellerId) ? null : input.SellerId,
+                AgentId = string.IsNullOrWhiteSpace(input.AgentId) ? null : input.AgentId,
                 Amount = input.Amount,
                 PaymentMethod = input.PaymentMethod,
                 PaymentStatus = input.PaymentStatus,
@@ -180,7 +209,9 @@ namespace RealEstateAdmin.Services
                 return ServiceResult.Fail(ServiceErrorCode.NotFound, "Transaction introuvable.");
             }
 
-            if (!PaymentMethods.Contains(paymentMethod) || !PaymentStatuses.Contains(paymentStatus))
+            var paymentMethods = await GetPaymentMethodsAsync();
+
+            if (!paymentMethods.Contains(paymentMethod) || !PaymentStatuses.Contains(paymentStatus))
             {
                 return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Modalité ou statut de paiement invalide.");
             }
@@ -188,7 +219,35 @@ namespace RealEstateAdmin.Services
             sale.PaymentMethod = paymentMethod;
             sale.PaymentStatus = paymentStatus;
             sale.PaidAt = paymentStatus == "Payé" ? DateTime.Now : null;
-            _context.Update(sale);
+
+            // If payment completed and we have a buyer, transfer ownership of the property
+            // so it appears in the buyer's "Mes biens" and is removed from the seller.
+            if (sale.PaymentStatus == "Payé" && !string.IsNullOrWhiteSpace(sale.BuyerId) && sale.BienImmobilier != null)
+            {
+                try
+                {
+                    // Change owner to buyer
+                    sale.BienImmobilier.UserId = sale.BuyerId;
+                    // Mark commercial status and type appropriately
+                    sale.BienImmobilier.StatutCommercial = "Vendu";
+                    sale.BienImmobilier.TypeTransaction = "Acheté";
+                    // Optionally unpublish after sale
+                    sale.BienImmobilier.IsPublished = false;
+                    // Update both sale and bien in same transaction
+                    _context.Update(sale);
+                    _context.Update(sale.BienImmobilier);
+                }
+                catch
+                {
+                    // ignore transfer errors, still persist payment status
+                    _context.Update(sale);
+                }
+            }
+            else
+            {
+                _context.Update(sale);
+            }
+
             await _context.SaveChangesAsync();
 
             await _auditLogService.LogAsync(

@@ -58,6 +58,8 @@ builder.Services.AddScoped<IVenteService, VenteService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAgendaService, AgendaService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+builder.Services.AddScoped<IAgentPerformanceService, AgentPerformanceService>();
+builder.Services.AddHttpClient();
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -362,11 +364,53 @@ app.Use(async (context, next) =>
 
     await next();
 });
+using (var scope = app.Services.CreateScope())
+{
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+    var email = "omarsuperadmin@gmail.com";
+    var password = "Ot12345";
+
+    // Créer les rôles si besoin
+    foreach (var role in new[] { "Admin", "SuperAdmin" })
+    {
+        if (!await roleManager.RoleExistsAsync(role))
+            await roleManager.CreateAsync(new IdentityRole(role));
+    }
+
+    // Créer l'utilisateur si inexistant
+    var user = await userManager.FindByEmailAsync(email);
+    if (user == null)
+    {
+        user = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true,
+            Nom = "omar Super Admin"
+        };
+
+        var createResult = await userManager.CreateAsync(user, password);
+        if (!createResult.Succeeded)
+        {
+            // log / inspect createResult.Errors
+        }
+    }
+
+    // Assigner les rôles (SuperAdmin + Admin)
+    if (!await userManager.IsInRoleAsync(user, "SuperAdmin"))
+        await userManager.AddToRoleAsync(user, "SuperAdmin");
+    if (!await userManager.IsInRoleAsync(user, "Admin"))
+        await userManager.AddToRoleAsync(user, "Admin");
+}
 
 app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapControllers();
 
 app.MapControllerRoute(
     name: "default",

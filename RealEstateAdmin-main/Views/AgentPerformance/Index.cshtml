@@ -1,0 +1,39 @@
+@model IEnumerable<RealEstateAdmin.Models.AgentPerformanceViewModel>
+
+@{
+    ViewData["Title"] = "Classement des agents";
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Classement des agents</h1>
+        <form asp-action="Recompute" method="post">
+            @Html.AntiForgeryToken()
+            <button class="btn btn-primary">Recalculer les scores</button>
+        </form>
+    </div>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Agent</th>
+                <th>Ponctualité</th>
+                <th>Feedback</th>
+                <th>Conversion</th>
+                <th>Dernier calcul</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in Model)
+            {
+                <tr>
+                    <td>@a.AgentName</td>
+                    <td>@a.PunctualityScore:F1</td>
+                    <td>@a.FeedbackScore:F1</td>
+                    <td>@a.ConversionScore:F1</td>
+                    <td>@a.LastComputed</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

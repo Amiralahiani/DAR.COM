@@ -26,21 +26,31 @@ namespace RealEstateAdmin.Controllers
             int? surfaceMin,
             int? surfaceMax,
             string? type,
-            string? statut)
+            string? statut,
+            string? solde)
         {
-            var filter = new ShopFilter
-            {
-                Titre = titre,
-                PrixMin = prixMin,
-                PrixMax = prixMax,
-                Adresse = adresse,
-                SurfaceMin = surfaceMin,
-                SurfaceMax = surfaceMax,
-                Type = type,
-                Statut = statut
-            };
+            var filter = BuildFilter(titre, prixMin, prixMax, adresse, surfaceMin, surfaceMax, type, statut, solde);
 
             var data = await _shopService.GetIndexDataAsync(filter);
+
+            return View(data);
+        }
+
+        [HttpGet("/Solde")]
+        [HttpGet("/Shop/Solde")]
+        public async Task<IActionResult> Solde(
+            string? titre,
+            decimal? prixMin,
+            decimal? prixMax,
+            string? adresse,
+            int? surfaceMin,
+            int? surfaceMax,
+            string? type,
+            string? statut)
+        {
+            var filter = BuildFilter(titre, prixMin, prixMax, adresse, surfaceMin, surfaceMax, type, statut, "1");
+
+            var data = await _shopService.GetSoldeDataAsync(filter);
 
             return View(data);
         }
@@ -121,6 +131,31 @@ namespace RealEstateAdmin.Controllers
             }
 
             return HandleResult(result);
+        }
+
+        private static ShopFilter BuildFilter(
+            string? titre,
+            decimal? prixMin,
+            decimal? prixMax,
+            string? adresse,
+            int? surfaceMin,
+            int? surfaceMax,
+            string? type,
+            string? statut,
+            string? solde)
+        {
+            return new ShopFilter
+            {
+                Titre = titre,
+                PrixMin = prixMin,
+                PrixMax = prixMax,
+                Adresse = adresse,
+                SurfaceMin = surfaceMin,
+                SurfaceMax = surfaceMax,
+                Type = type,
+                Statut = statut,
+                Solde = solde
+            };
         }
 
         private IActionResult HandleResult(ServiceResult result)

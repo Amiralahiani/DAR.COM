@@ -28,7 +28,8 @@ namespace RealEstateAdmin.Controllers
             int? surfaceMin,
             string? typeTransaction,
             string? statutCommercial,
-            string? publicationStatus)
+            string? publicationStatus,
+            string? solde)
         {
             var currentUser = await _userManager.GetUserAsync(User);
             var filter = new BienFilter
@@ -39,7 +40,8 @@ namespace RealEstateAdmin.Controllers
                 SurfaceMin = surfaceMin,
                 TypeTransaction = typeTransaction,
                 StatutCommercial = statutCommercial,
-                PublicationStatus = publicationStatus
+                PublicationStatus = publicationStatus,
+                Solde = solde
             };
 
             var data = await _bienService.GetIndexDataAsync(filter, currentUser?.Id, HasAdminAccess());
@@ -51,12 +53,20 @@ namespace RealEstateAdmin.Controllers
             ViewBag.TypeTransaction = data.Filter.TypeTransaction;
             ViewBag.StatutCommercial = data.Filter.StatutCommercial;
             ViewBag.PublicationStatus = data.Filter.PublicationStatus;
+            ViewBag.Solde = data.Filter.Solde;
             ViewBag.TypeOptions = data.TypeOptions.ToArray();
             ViewBag.CommercialStatusOptions = data.CommercialStatusOptions.ToArray();
             ViewBag.PublicationStatusOptions = data.PublicationStatusOptions.ToArray();
             ViewBag.IsAdmin = data.IsAdmin;
 
             return View(data.Biens);
+        }
+
+        [AllowAnonymous]
+        public async Task<IActionResult> Map()
+        {
+            var biens = await _bienService.GetMapDataAsync();
+            return View(biens);
         }
 
         [Authorize(Roles = "Admin,SuperAdmin")]
@@ -100,7 +110,7 @@ namespace RealEstateAdmin.Controllers
         // POST: BienImmobilier/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Titre,Description,Prix,Adresse,Surface,NombrePieces,ImageUrl,TypeTransaction,StatutCommercial,IsPublished,PublicationStatus,ImageUrlsInput")] BienImmobilier bienImmobilier)
+        public async Task<IActionResult> Create([Bind("Id,Titre,Description,Prix,Adresse,Surface,NombrePieces,ImageUrl,TypeTransaction,StatutCommercial,IsPublished,PublicationStatus,ImageUrlsInput,DiscountPercent")] BienImmobilier bienImmobilier)
         {
             if (!ModelState.IsValid)
             {
@@ -150,7 +160,7 @@ namespace RealEstateAdmin.Controllers
         // POST: BienImmobilier/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Titre,Description,Prix,Adresse,Surface,NombrePieces,ImageUrl,TypeTransaction,StatutCommercial,IsPublished,PublicationStatus,ImageUrlsInput")] BienImmobilier bienImmobilier)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Titre,Description,Prix,Adresse,Surface,NombrePieces,ImageUrl,TypeTransaction,StatutCommercial,IsPublished,PublicationStatus,ImageUrlsInput,DiscountPercent")] BienImmobilier bienImmobilier)
         {
             if (!ModelState.IsValid)
             {

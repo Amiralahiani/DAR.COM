@@ -51,6 +51,18 @@
                     </div>
 
                     <div class="col-md-6">
+                        <label asp-for="Input.AgentId" class="form-label"></label>
+                        <select asp-for="Input.AgentId" class="form-select">
+                            <option value="">Non assigné</option>
+                            @foreach (var user in Model.Users)
+                            {
+                                <option value="@user.Value">@user.Label</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Input.AgentId" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
                         <label asp-for="Input.SellerId" class="form-label"></label>
                         <select asp-for="Input.SellerId" class="form-select">
                             <option value="">Non assigné</option>

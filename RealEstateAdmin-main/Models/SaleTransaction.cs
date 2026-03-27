@@ -42,6 +42,23 @@ namespace RealEstateAdmin.Models
 
         public DateTime? PaidAt { get; set; }
 
+        // Agent assigned to this transaction (optional)
+        [StringLength(450)]
+        public string? AgentId { get; set; }
+
+        [ForeignKey("AgentId")]
+        public UserReference? Agent { get; set; }
+
+        // Ratings from buyer/seller about the agent (0..5 scale)
+        [Range(0, 5)]
+        public decimal? PunctualityRating { get; set; }
+
+        [Range(0, 5)]
+        public decimal? FeedbackRating { get; set; }
+
+        [Range(0, 5)]
+        public decimal? ConversionRating { get; set; }
+
         [StringLength(1000)]
         public string? Notes { get; set; }
     }

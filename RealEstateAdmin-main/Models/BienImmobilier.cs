@@ -71,6 +71,20 @@ namespace RealEstateAdmin.Models
         [Display(Name = "Images (URLs multiples)")]
         public string? ImageUrlsInput { get; set; }
 
+        [Display(Name = "Latitude")] 
+        public double? Latitude { get; set; }
+
+        [Display(Name = "Longitude")] 
+        public double? Longitude { get; set; }
+
+        [Display(Name = "Réduction (%)")]
+        [Range(0, 100, ErrorMessage = "La réduction doit être comprise entre 0 et 100")]
+        public int DiscountPercent { get; set; } = 0;
+
+        [NotMapped]
+        [Display(Name = "En solde")]
+        public bool IsOnSale => DiscountPercent > 0;
+
         public ICollection<BienImage> Images { get; set; } = new List<BienImage>();
     }
 }

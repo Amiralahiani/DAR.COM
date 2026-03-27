@@ -1,0 +1,97 @@
+@model IEnumerable<RealEstateAdmin.Models.BienImmobilier>
+
+@{
+    ViewData["Title"] = "Parcourir la carte";
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-gradient"><i class="bi bi-map"></i> Parcourir la carte</h1>
+        <a asp-action="Index" class="btn btn-outline-secondary">Retour liste</a>
+    </div>
+
+    <div id="map" style="height:70vh; width:100%;"></div>
+</div>
+
+@section Scripts {
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="" crossorigin=""></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <script>
+        const biens = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(b => new {
+            id = b.Id,
+            title = b.Titre,
+            address = b.Adresse,
+            lat = b.Latitude,
+            lng = b.Longitude,
+            price = b.Prix,
+            img = b.ImageUrl
+        }))); 
+
+        const map = L.map('map').setView([36.8065, 10.1815], 6);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Helper to add marker with popup/tooltip
+        function addMarker(lat, lng, b) {
+            const marker = L.marker([lat, lng]).addTo(map);
+            const popup = `<div style="max-width:300px">
+                                <h5 style="margin-bottom:4px">${b.title}</h5>
+                                ${b.address ? `<div class="text-muted" style="font-size:0.9rem"><i class="bi bi-geo-alt"></i> ${b.address}</div>` : ''}
+                                <div style="margin-top:6px;font-weight:600">${b.price} DT</div>
+                                ${b.img ? `<img src="${b.img}" style="width:100%;max-height:120px;object-fit:cover;margin-top:8px;" />` : ''}
+                                <div class="mt-2"><a href="/BienImmobilier/Details/${b.id}" class="btn btn-sm btn-primary">Voir</a></div>
+                               </div>`;
+            marker.bindPopup(popup);
+            if (b.address) {
+                marker.bindTooltip(`${b.address}`, { direction: 'top', offset: [0, -10], opacity: 0.9 });
+            }
+            return marker;
+        }
+
+        async function geocodeAddress(address) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
+                const res = await fetch(url);
+                if (!res.ok) return null;
+                const arr = await res.json();
+                if (Array.isArray(arr) && arr.length > 0) {
+                    const lat = parseFloat(arr[0].lat);
+                    const lon = parseFloat(arr[0].lon);
+                    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+                        return { lat, lon };
+                    }
+                }
+            }
+            catch (e) {
+                // ignore network errors
+            }
+            return null;
+        }
+
+        (async () => {
+            for (const b of biens) {
+                const lat = b.lat !== null && b.lat !== undefined ? parseFloat(b.lat) : NaN;
+                const lng = b.lng !== null && b.lng !== undefined ? parseFloat(b.lng) : NaN;
+                if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                    addMarker(lat, lng, b);
+                    continue;
+                }
+
+                // No coordinates stored — try client-side geocoding using the address
+                if (b.address) {
+                    const g = await geocodeAddress(b.address);
+                    if (g) {
+                        addMarker(g.lat, g.lon, b);
+                        continue;
+                    }
+                }
+
+                // if still no coords, skip
+            }
+        })();
+    </script>
+}

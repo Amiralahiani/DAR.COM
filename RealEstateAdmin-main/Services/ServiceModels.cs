@@ -75,6 +75,7 @@ namespace RealEstateAdmin.Services
         public int? SurfaceMax { get; set; }
         public string? Type { get; set; }
         public string? Statut { get; set; }
+        public string? Solde { get; set; }
     }
 
     public class ShopIndexData
@@ -138,6 +139,8 @@ namespace RealEstateAdmin.Services
         public string? TypeTransaction { get; set; }
         public string? StatutCommercial { get; set; }
         public string? PublicationStatus { get; set; }
+        // filter to show only biens en solde (value: "1")
+        public string? Solde { get; set; }
     }
 
     public class BienIndexData
@@ -174,8 +177,12 @@ namespace RealEstateAdmin.Services
         [Display(Name = "Vendeur")]
         public string? SellerId { get; set; }
 
+        [Display(Name = "Agent")]
+        public string? AgentId { get; set; }
+
         [Display(Name = "Montant")]
-        [Range(typeof(decimal), "0.01", "79228162514264337593543950335", ErrorMessage = "Le montant doit être supérieur à 0.")]
+        // Use double range to avoid decimal string parsing issues with server culture when generating client validators
+        [Range(0.01, double.MaxValue, ErrorMessage = "Le montant doit être supérieur à 0.")]
         public decimal Amount { get; set; }
 
         [Display(Name = "Mode de paiement")]

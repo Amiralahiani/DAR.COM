@@ -83,6 +83,11 @@
                                 <i class="bi bi-shop"></i> Shop
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Shop" asp-action="Solde">
+                                <i class="bi bi-tag"></i> Solde
+                            </a>
+                        </li>
                         @if (!User.IsInRole("Admin") && !User.IsInRole("SuperAdmin"))
                         {
                             <li class="nav-item">

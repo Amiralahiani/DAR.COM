@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RealEstateAdmin.Data;
 
@@ -11,9 +12,11 @@ using RealEstateAdmin.Data;
 namespace RealEstateAdmin.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260327024904_AddAgentPerformance")]
+    partial class AddAgentPerformance
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -142,9 +145,6 @@ namespace RealEstateAdmin.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(2000)
                         .HasColumnType("varchar(2000)");
-
-                    b.Property<decimal>("DiscountPercent")
-                        .HasColumnType("decimal(65,30)");
 
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(1000)
@@ -275,10 +275,6 @@ namespace RealEstateAdmin.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AgentId")
-                        .HasMaxLength(450)
-                        .HasColumnType("varchar(450)");
-
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -290,16 +286,10 @@ namespace RealEstateAdmin.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("varchar(450)");
 
-                    b.Property<decimal?>("ConversionRating")
-                        .HasColumnType("decimal(65,30)");
-
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime(6)")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
-
-                    b.Property<decimal?>("FeedbackRating")
-                        .HasColumnType("decimal(65,30)");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
@@ -322,9 +312,6 @@ namespace RealEstateAdmin.Migrations
                         .HasColumnType("varchar(50)")
                         .HasDefaultValue("En attente");
 
-                    b.Property<decimal?>("PunctualityRating")
-                        .HasColumnType("decimal(65,30)");
-
                     b.Property<string>("SellerId")
                         .HasMaxLength(450)
                         .HasColumnType("varchar(450)");
@@ -337,8 +324,6 @@ namespace RealEstateAdmin.Migrations
                         .HasDefaultValue("Finalisée");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AgentId");
 
                     b.HasIndex("BienImmobilierId");
 
@@ -398,10 +383,6 @@ namespace RealEstateAdmin.Migrations
 
             modelBuilder.Entity("RealEstateAdmin.Models.SaleTransaction", b =>
                 {
-                    b.HasOne("RealEstateAdmin.Models.UserReference", "Agent")
-                        .WithMany()
-                        .HasForeignKey("AgentId");
-
                     b.HasOne("RealEstateAdmin.Models.BienImmobilier", "BienImmobilier")
                         .WithMany()
                         .HasForeignKey("BienImmobilierId")
@@ -417,8 +398,6 @@ namespace RealEstateAdmin.Migrations
                         .WithMany()
                         .HasForeignKey("SellerId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Agent");
 
                     b.Navigation("BienImmobilier");
 

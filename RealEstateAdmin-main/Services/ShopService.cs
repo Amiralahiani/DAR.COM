@@ -29,24 +29,39 @@ namespace RealEstateAdmin.Services
         private readonly ApplicationDbContext _context;
         private readonly IAuditLogService _auditLogService;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IVenteService _venteService;
 
         public ShopService(
             ApplicationDbContext context,
             IAuditLogService auditLogService,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            IVenteService venteService)
         {
             _context = context;
             _auditLogService = auditLogService;
             _userManager = userManager;
+            _venteService = venteService;
+        }
+
+
+        public async Task<ShopIndexData> GetSoldeDataAsync(ShopFilter filter)
+        {
+            return await GetIndexDataAsync(NormalizeFilter(filter, saleOnly: true));
         }
 
         public async Task<ShopIndexData> GetIndexDataAsync(ShopFilter filter)
         {
+            filter = NormalizeFilter(filter);
+
             var biensQuery = _context.Biens
                 .Include(b => b.User)
                 .Include(b => b.Images)
-                .Where(b => b.PublicationStatus == "Publié")
-                .Where(b => string.IsNullOrEmpty(b.TypeTransaction) || b.TypeTransaction == "A Vendre" || b.TypeTransaction == "A Louer")
+                .Where(b => b.IsPublished || b.PublicationStatus == "Publié")
+                .Where(b =>
+                    b.DiscountPercent > 0
+                    || string.IsNullOrEmpty(b.TypeTransaction)
+                    || b.TypeTransaction == "A Vendre"
+                    || b.TypeTransaction == "A Louer")
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(filter.Titre))
@@ -89,6 +104,11 @@ namespace RealEstateAdmin.Services
                 biensQuery = biensQuery.Where(b => b.StatutCommercial == filter.Statut);
             }
 
+            if (!string.IsNullOrWhiteSpace(filter.Solde) && filter.Solde.Equals("1"))
+            {
+                biensQuery = biensQuery.Where(b => b.DiscountPercent > 0m);
+            }
+
             var biens = await biensQuery.ToListAsync();
             var routingByBien = await ResolveRoutingByBienAsync(biens);
             var visitSlotsByBien = await BuildAvailableVisitSlotsByBienAsync(routingByBien);
@@ -119,10 +139,11 @@ namespace RealEstateAdmin.Services
             var bien = contextResult.Bien!;
 
             var subject = $"{InterestSubjectPrefix}{bien.Id}";
+            var interestNeedle = $"user_id={user.Id}".ToLowerInvariant();
             var hasRecentInterest = await _context.Messages.AnyAsync(m =>
                 m.Sujet == subject
                 && m.DateCreation >= DateTime.Now.AddDays(-14)
-                && (m.Contenu ?? string.Empty).Contains($"USER_ID={user.Id}", StringComparison.OrdinalIgnoreCase));
+                && (m.Contenu ?? string.Empty).ToLower().Contains(interestNeedle));
 
             if (hasRecentInterest)
             {
@@ -149,6 +170,18 @@ namespace RealEstateAdmin.Services
                 $"Intérêt signalé pour '{bien.Titre}'");
 
             return ServiceResult.Ok("Votre intérêt a été enregistré. Un agent vous contactera bientôt.");
+        }
+
+        private static ShopFilter NormalizeFilter(ShopFilter? filter, bool saleOnly = false)
+        {
+            filter ??= new ShopFilter();
+
+            if (saleOnly)
+            {
+                filter.Solde = "1";
+            }
+
+            return filter;
         }
 
         public async Task<ServiceResult> ReserveVisitAsync(int bienId, DateTime visitSlot, string userId)
@@ -218,10 +251,12 @@ namespace RealEstateAdmin.Services
             }
 
             var subject = $"{MeetingSubjectPrefix}{bien.Id}";
+            var userNeedle = $"user_id={user.Id}".ToLowerInvariant();
+            var slotNeedle = $"slot_local={meetingToken}".ToLowerInvariant();
             var duplicate = await _context.Messages.AnyAsync(m =>
                 m.Sujet == subject
-                && (m.Contenu ?? string.Empty).Contains($"USER_ID={user.Id}", StringComparison.OrdinalIgnoreCase)
-                && (m.Contenu ?? string.Empty).Contains($"SLOT_LOCAL={meetingToken}", StringComparison.OrdinalIgnoreCase));
+                && (m.Contenu ?? string.Empty).ToLower().Contains(userNeedle)
+                && (m.Contenu ?? string.Empty).ToLower().Contains(slotNeedle));
 
             if (duplicate)
             {

@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RealEstateAdmin.Data;
 using RealEstateAdmin.Models;
+using System.Globalization;
+using System.Text.Json;
+using System.Net.Http;
 
 namespace RealEstateAdmin.Services
 {
@@ -15,18 +18,149 @@ namespace RealEstateAdmin.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly PdfExportService _pdfExportService;
         private readonly IAuditLogService _auditLogService;
+        private readonly System.Net.Http.IHttpClientFactory _httpClientFactory;
 
         public BienImmobilierService(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             PdfExportService pdfExportService,
-            IAuditLogService auditLogService)
+            IAuditLogService auditLogService,
+            System.Net.Http.IHttpClientFactory httpClientFactory)
         {
             _context = context;
             _userManager = userManager;
             _pdfExportService = pdfExportService;
             _auditLogService = auditLogService;
+            _httpClientFactory = httpClientFactory;
         }
+
+        private async Task GeocodeIfNeededAsync(BienImmobilier bien)
+        {
+            if (string.IsNullOrWhiteSpace(bien.Adresse) || (bien.Latitude.HasValue && bien.Longitude.HasValue))
+            {
+                return;
+            }
+
+            // 1) Try extract coordinates directly from the Adresse string (supports decimal, @lat,lng and DMS)
+            var coords = TryParseCoordinatesFromString(bien.Adresse);
+            if (coords != null)
+            {
+                bien.Latitude = coords.Value.lat;
+                bien.Longitude = coords.Value.lng;
+                return;
+            }
+
+            // 2) Fallback to Nominatim geocoding
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("RealEstateAdmin/1.0 (contact@example.com)");
+                var url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + System.Net.WebUtility.UrlEncode(bien.Adresse);
+                var resp = await client.GetStringAsync(url);
+                var arr = JsonSerializer.Deserialize<List<NominatimResult>>(resp);
+                if (arr != null && arr.Count > 0)
+                {
+                    if (double.TryParse(arr[0].lat, NumberStyles.Any, CultureInfo.InvariantCulture, out var la)
+                        && double.TryParse(arr[0].lon, NumberStyles.Any, CultureInfo.InvariantCulture, out var lo))
+                    {
+                        bien.Latitude = la;
+                        bien.Longitude = lo;
+                    }
+                }
+            }
+            catch
+            {
+                // ignore geocoding errors; coordinates remain null
+            }
+        }
+
+        private static (double lat, double lng)? TryParseCoordinatesFromString(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return null;
+
+            input = input.Trim();
+
+            // Pattern 1: direct decimal pair: "lat,lng" (e.g. 36.8065,10.1815)
+            var decMatch = System.Text.RegularExpressions.Regex.Match(input, @"([+-]?\d{1,3}\.\d+)\s*,\s*([+-]?\d{1,3}\.\d+)");
+            if (decMatch.Success)
+            {
+                if (double.TryParse(decMatch.Groups[1].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var la)
+                    && double.TryParse(decMatch.Groups[2].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var lo))
+                {
+                    return (la, lo);
+                }
+            }
+
+            // Pattern 2: Google Maps URL style @lat,lng,zoom
+            var atMatch = System.Text.RegularExpressions.Regex.Match(input, @"@([+-]?\d{1,3}\.\d+),([+-]?\d{1,3}\.\d+)");
+            if (atMatch.Success)
+            {
+                if (double.TryParse(atMatch.Groups[1].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var la)
+                    && double.TryParse(atMatch.Groups[2].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var lo))
+                {
+                    return (la, lo);
+                }
+            }
+
+            // Pattern 3: DMS coordinates like 36°50'58.6"N 10°10'44.7"E or variations
+            // Try to capture two DMS blocks
+            // Use a single verbatim string and represent a double-quote by doubling it ("" in a verbatim string)
+            var dmsPattern = @"([0-9]{1,3})°\s*([0-9]{1,2})'\s*([0-9]{1,2}(?:\.\d+)?)""?\s*([NnSs])";
+            var dmsMatches = System.Text.RegularExpressions.Regex.Matches(input, dmsPattern);
+            if (dmsMatches.Count >= 2)
+            {
+                try
+                {
+                    double ParseDms(System.Text.RegularExpressions.Match m)
+                    {
+                        var deg = int.Parse(m.Groups[1].Value);
+                        var min = int.Parse(m.Groups[2].Value);
+                        var sec = double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture);
+                        var hemi = m.Groups[4].Value.ToUpperInvariant();
+                        var dec = deg + (min / 60.0) + (sec / 3600.0);
+                        if (hemi == "S" || hemi == "W") dec = -dec;
+                        return dec;
+                    }
+
+                    var la = ParseDms(dmsMatches[0]);
+                    var lo = ParseDms(dmsMatches[1]);
+                    return (la, lo);
+                }
+                catch
+                {
+                    // ignore parse errors
+                }
+            }
+
+            // Pattern 4: alternative DMS with degree symbol and N/E letters without seconds
+            var simpleDms = System.Text.RegularExpressions.Regex.Match(input, @"([0-9]{1,3})°\s*([0-9]{1,2})'\s*([NnSs])\D+([0-9]{1,3})°\s*([0-9]{1,2})'\s*([EeWw])");
+            if (simpleDms.Success)
+            {
+                try
+                {
+                    double ParseSimple(System.Text.RegularExpressions.GroupCollection g, int startIndex)
+                    {
+                        var deg = int.Parse(g[startIndex].Value);
+                        var min = int.Parse(g[startIndex + 1].Value);
+                        var hemi = g[startIndex + 2].Value.ToUpperInvariant();
+                        var dec = deg + (min / 60.0);
+                        if (hemi == "S" || hemi == "W") dec = -dec;
+                        return dec;
+                    }
+
+                    var la = ParseSimple(simpleDms.Groups, 1);
+                    var lo = ParseSimple(simpleDms.Groups, 4);
+                    return (la, lo);
+                }
+                catch
+                {
+                }
+            }
+
+            return null;
+        }
+
+        private record NominatimResult(string lat, string lon);
 
         public IReadOnlyList<string> TypeTransactions => InternalTypeTransactions;
         public IReadOnlyList<string> CommercialStatuses => InternalCommercialStatuses;
@@ -76,6 +210,12 @@ namespace RealEstateAdmin.Services
                 biens = biens.Where(b => b.PublicationStatus == filter.PublicationStatus);
             }
 
+            // if filter indicates to show only soldes (en solde)
+            if (!string.IsNullOrWhiteSpace(filter.Solde) && filter.Solde.Equals("1"))
+            {
+                biens = biens.Where(b => b.DiscountPercent > 0m);
+            }
+
             return new BienIndexData
             {
                 Biens = await biens.ToListAsync(),
@@ -91,10 +231,10 @@ namespace RealEstateAdmin.Services
         {
             var biens = await _context.Biens.Include(b => b.User).ToListAsync();
             var sb = new System.Text.StringBuilder();
-            sb.AppendLine("Id;Titre;Prix;Adresse;Surface;Pieces;Type;StatutCommercial;Publication;Proprietaire");
+            sb.AppendLine("Id;Titre;Prix;Adresse;Surface;Pieces;Type;StatutCommercial;Publication;DiscountPercent;Proprietaire");
             foreach (var b in biens)
             {
-                sb.AppendLine($"{b.Id};\"{b.Titre}\";{b.Prix};\"{b.Adresse}\";{b.Surface};{b.NombrePieces};{b.TypeTransaction};{b.StatutCommercial};{b.PublicationStatus};\"{b.User?.UserName}\"");
+                sb.AppendLine($"{b.Id};\"{b.Titre}\";{b.Prix};\"{b.Adresse}\";{b.Surface};{b.NombrePieces};{b.TypeTransaction};{b.StatutCommercial};{b.PublicationStatus};{b.DiscountPercent};\"{b.User?.UserName}\"");
             }
 
             return sb.ToString();
@@ -156,12 +296,22 @@ namespace RealEstateAdmin.Services
                 await ApplyValidatorOnPublicationDecisionAsync(bienImmobilier, currentUserId);
             }
 
+            // attempt server-side geocoding if coordinates not provided
+            await GeocodeIfNeededAsync(bienImmobilier);
+
             _context.Add(bienImmobilier);
             await _context.SaveChangesAsync();
             await SaveImagesAsync(bienImmobilier);
             await _auditLogService.LogAsync(currentUserId, "Create", "BienImmobilier", bienImmobilier.Id, $"Création du bien '{bienImmobilier.Titre}'");
 
             return ServiceResult.Ok();
+        }
+
+        public async Task<IReadOnlyList<BienImmobilier>> GetMapDataAsync()
+        {
+            return await _context.Biens
+                .Where(b => b.IsPublished)
+                .ToListAsync();
         }
 
         public async Task<ServiceResult> UpdateAsync(int id, BienImmobilier bienImmobilier, string? currentUserId, bool hasAdminAccess)
@@ -184,29 +334,48 @@ namespace RealEstateAdmin.Services
 
             try
             {
-                bienImmobilier.UserId = existingBien.UserId;
-                bienImmobilier.TypeTransaction = NormalizeTypeTransaction(bienImmobilier.TypeTransaction, existingBien.TypeTransaction);
-                bienImmobilier.PublicationValidatedByAdminId = existingBien.PublicationValidatedByAdminId;
-                bienImmobilier.PublicationValidatedAt = existingBien.PublicationValidatedAt;
+                // Map incoming values onto the tracked entity to avoid tracking conflicts
+                existingBien.Titre = bienImmobilier.Titre;
+                existingBien.Description = bienImmobilier.Description;
+                existingBien.Prix = bienImmobilier.Prix;
+                existingBien.Adresse = bienImmobilier.Adresse;
+                existingBien.Surface = bienImmobilier.Surface;
+                existingBien.NombrePieces = bienImmobilier.NombrePieces;
+                existingBien.ImageUrl = bienImmobilier.ImageUrl;
+                existingBien.ImageUrlsInput = bienImmobilier.ImageUrlsInput;
+                existingBien.Latitude = bienImmobilier.Latitude;
+                existingBien.Longitude = bienImmobilier.Longitude;
+                existingBien.DiscountPercent = bienImmobilier.DiscountPercent;
+
+                existingBien.TypeTransaction = NormalizeTypeTransaction(bienImmobilier.TypeTransaction, existingBien.TypeTransaction);
+                existingBien.PublicationValidatedByAdminId = existingBien.PublicationValidatedByAdminId;
+                existingBien.PublicationValidatedAt = existingBien.PublicationValidatedAt;
 
                 if (!hasAdminAccess)
                 {
-                    bienImmobilier.IsPublished = existingBien.IsPublished;
-                    bienImmobilier.PublicationStatus = existingBien.PublicationStatus;
-                    bienImmobilier.StatutCommercial = existingBien.StatutCommercial;
+                    // preserve existing publication/commercial state
+                    existingBien.IsPublished = existingBien.IsPublished;
+                    existingBien.PublicationStatus = existingBien.PublicationStatus;
+                    existingBien.StatutCommercial = existingBien.StatutCommercial;
                 }
                 else
                 {
-                    bienImmobilier.PublicationStatus = NormalizePublicationStatus(bienImmobilier.PublicationStatus, existingBien.PublicationStatus);
-                    bienImmobilier.StatutCommercial = NormalizeCommercialStatus(bienImmobilier.StatutCommercial, existingBien.StatutCommercial);
-                    bienImmobilier.IsPublished = string.Equals(bienImmobilier.PublicationStatus, "Publié", StringComparison.OrdinalIgnoreCase);
-                    await ApplyValidatorOnPublicationDecisionAsync(bienImmobilier, currentUserId);
+                    existingBien.PublicationStatus = NormalizePublicationStatus(bienImmobilier.PublicationStatus, existingBien.PublicationStatus);
+                    existingBien.StatutCommercial = NormalizeCommercialStatus(bienImmobilier.StatutCommercial, existingBien.StatutCommercial);
+                    existingBien.IsPublished = string.Equals(existingBien.PublicationStatus, "Publié", StringComparison.OrdinalIgnoreCase);
+                    await ApplyValidatorOnPublicationDecisionAsync(existingBien, currentUserId);
                 }
 
-                _context.Update(bienImmobilier);
+
+                // attempt to geocode when address changed and coordinates missing
+                await GeocodeIfNeededAsync(existingBien);
+
+                _context.Update(existingBien);
                 await _context.SaveChangesAsync();
-                await SaveImagesAsync(bienImmobilier, replace: true);
-                await _auditLogService.LogAsync(currentUserId, "Edit", "BienImmobilier", bienImmobilier.Id, $"Modification du bien '{bienImmobilier.Titre}'");
+
+                // Use the tracked entity for image operations and logging
+                await SaveImagesAsync(existingBien, replace: true);
+                await _auditLogService.LogAsync(currentUserId, "Edit", "BienImmobilier", existingBien.Id, $"Modification du bien '{existingBien.Titre}'");
             }
             catch (DbUpdateConcurrencyException)
             {

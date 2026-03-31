@@ -1,39 +1,183 @@
 @model IEnumerable<RealEstateAdmin.Models.AgentPerformanceViewModel>
 
 @{
-    ViewData["Title"] = "Classement des agents";
+    ViewData["Title"] = "Performance des Agents";
 }
 
-<div class="container">
+<div class="container-fluid px-4 py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Classement des agents</h1>
-        <form asp-action="Recompute" method="post">
-            @Html.AntiForgeryToken()
-            <button class="btn btn-primary">Recalculer les scores</button>
-        </form>
+        <div>
+            <h1 class="text-gradient mb-1"><i class="bi bi-graph-up-arrow"></i> Performance des Agents</h1>
+            <p class="text-muted">Suivi des indicateurs clés et du scoring global de l'équipe commerciale.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="filterPeriod" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-calendar-event"></i> Période : Trimestre en cours
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="filterPeriod">
+                    <li><a class="dropdown-item" href="#">Mois en cours</a></li>
+                    <li><a class="dropdown-item" href="#">Trimestre en cours</a></li>
+                    <li><a class="dropdown-item" href="#">Année en cours</a></li>
+                </ul>
+            </div>
+            <button class="btn btn-primary" onclick="window.print()">
+                <i class="bi bi-download"></i> Export Excel
+            </button>
+        </div>
     </div>
 
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Agent</th>
-                <th>Ponctualité</th>
-                <th>Feedback</th>
-                <th>Conversion</th>
-                <th>Dernier calcul</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var a in Model)
-            {
-                <tr>
-                    <td>@a.AgentName</td>
-                    <td>@a.PunctualityScore:F1</td>
-                    <td>@a.FeedbackScore:F1</td>
-                    <td>@a.ConversionScore:F1</td>
-                    <td>@a.LastComputed</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <!-- TABLEAU DE PERFORMANCE -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light py-3">
+                        <tr>
+                            <th class="ps-4" style="width: 80px;">Rang</th>
+                            <th>Agent</th>
+                            <th>Score Global</th>
+                            <th>Vendus / Valeur</th>
+                            <th>Conversion</th>
+                            <th>Délai Moyen</th>
+                            <th>Satisfaction</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            int rank = 1;
+                        }
+                        @foreach (var agent in Model)
+                        {
+                            var isCurrentUser = string.Equals(agent.AgentId, (string?)ViewBag.CurrentUserId, StringComparison.OrdinalIgnoreCase);
+                            var scoreClass = agent.ScoreGlobal >= 80 ? "bg-success" : (agent.ScoreGlobal >= 50 ? "bg-warning text-dark" : "bg-danger");
+                            var badgeLabel = agent.ScoreGlobal >= 80 ? "Excellent" : (agent.ScoreGlobal >= 50 ? "Moyen" : "Faible");
+                            var rowId = isCurrentUser ? "current-user-row" : "";
+                            
+                            <tr id="@rowId">
+                                <td class="ps-4">
+                                    <div class="rank-badge @(rank == 1 ? "rank-1" : rank == 2 ? "rank-2" : rank == 3 ? "rank-3" : "rank-default")">
+                                        @rank
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle me-2">@agent.AgentName[0]</div>
+                                        <div>
+                                            <div class="fw-bold">@agent.AgentName @(isCurrentUser ? Html.Raw("<span class='badge bg-primary ms-1 x-small'>Vous</span>") : null)</div>
+                                            <div class="small text-muted">Ancienneté: @agent.AncienneteMois mois</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                            <div class="progress-bar @scoreClass" role="progressbar" style="width: @agent.ScoreGlobal.ToString("0")%" aria-valuenow="@agent.ScoreGlobal" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <span class="badge @scoreClass">@agent.ScoreGlobal.ToString("0") / 100</span>
+                                    </div>
+                                    <small class="text-muted italic">@badgeLabel</small>
+                                </td>
+                                <td>
+                                    <div class="fw-bold">@agent.BiensVendus biens</div>
+                                    <div class="small text-muted">@agent.ValeurTotaleVendue.ToString("N0") DT</div>
+                                </td>
+                                <td>
+                                    <div class="fw-bold">@agent.TauxConversion.ToString("0.0")%</div>
+                                    <div class="progress" style="height: 4px; width: 60px;">
+                                        <div class="progress-bar bg-info" style="width: @agent.TauxConversion.ToString("0")%"></div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border"><i class="bi bi-clock"></i> @agent.DelaiMoyenVente.ToString("0") j</span>
+                                </td>
+                                <td>
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <i class="bi @(i <= agent.SatisfactionClient ? "bi-star-fill text-warning" : "bi-star text-muted") small"></i>
+                                    }
+                                    <div class="small text-muted">@agent.SatisfactionClient.ToString("0.0") / 5</div>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <a href="#" class="btn btn-sm @(isCurrentUser ? "btn-primary" : "btn-outline-primary")">
+                                        <i class="bi bi-eye"></i> Détails
+                                    </a>
+                                </td>
+                            </tr>
+                            rank++;
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+    .avatar-circle {
+        width: 32px;
+        height: 32px;
+        background-color: #6366f1;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.8rem;
+    }
+    .text-gradient {
+        background: linear-gradient(45deg, #1e3a8a, #3b82f6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+    }
+    .table thead th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+        color: #64748b;
+        border-top: none;
+    }
+    .progress-bar {
+        transition: width 1s ease-in-out;
+    }
+    .rank-badge {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.9rem;
+    }
+    .rank-1 { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #fff; box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3); }
+    .rank-2 { background: linear-gradient(135deg, #c0c0c0, #708090); color: #fff; box-shadow: 0 4px 10px rgba(192, 192, 192, 0.3); }
+    .rank-3 { background: linear-gradient(135deg, #cd7f32, #8b4513); color: #fff; box-shadow: 0 4px 10px rgba(205, 127, 50, 0.3); }
+    .rank-default { background: #f1f5f9; color: #64748b; }
+    
+    /* highlight row uses JS now */
+    .x-small { font-size: 0.65rem; padding: 0.2rem 0.5rem; }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var row = document.getElementById('current-user-row');
+        if (!row) return;
+
+        function applyColor() {
+            row.style.setProperty('background-color', '#fef9ec', 'important');
+            var cells = row.querySelectorAll('td');
+            cells.forEach(function(td) {
+                td.style.setProperty('background-color', '#fef9ec', 'important');
+            });
+        }
+
+        applyColor();
+        row.addEventListener('mouseenter', applyColor);
+        row.addEventListener('mouseleave', applyColor);
+    });
+</script>

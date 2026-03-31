@@ -7,9 +7,15 @@ namespace RealEstateAdmin.Models
         public string AgentId { get; set; } = null!;
         public string AgentName { get; set; } = string.Empty;
 
-        public double PunctualityScore { get; set; }
-        public double FeedbackScore { get; set; }
-        public double ConversionScore { get; set; }
+        public int BiensVendus { get; set; }
+        public decimal ValeurTotaleVendue { get; set; }
+        public double TauxConversion { get; set; }
+        public double DelaiMoyenVente { get; set; }
+        public double SatisfactionClient { get; set; }
+        public int TotalVisites { get; set; }
+        public double TauxPaiementComplet { get; set; }
+        public double ScoreGlobal { get; set; }
+        public int AncienneteMois { get; set; }
 
         public DateTime LastComputed { get; set; }
     }

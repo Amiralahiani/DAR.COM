@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
 
 namespace RealEstateAdmin.Models
 {
@@ -49,17 +50,33 @@ namespace RealEstateAdmin.Models
         [ForeignKey("AgentId")]
         public UserReference? Agent { get; set; }
 
-        // Ratings from buyer/seller about the agent (0..5 scale)
         [Range(0, 5)]
-        public decimal? PunctualityRating { get; set; }
+        [Display(Name = "Satisfaction client")]
+        public decimal? NoteClient { get; set; }
 
-        [Range(0, 5)]
-        public decimal? FeedbackRating { get; set; }
-
-        [Range(0, 5)]
-        public decimal? ConversionRating { get; set; }
+        [Display(Name = "Nombre de visites")]
+        public int NbVisites { get; set; } = 0;
 
         [StringLength(1000)]
         public string? Notes { get; set; }
+
+        // Statut détaillé du paiement : En attente / Partiel / Complet
+        [StringLength(50)]
+        [Display(Name = "Statut paiement détaillé")]
+        public string StatutPaiementDetaille { get; set; } = "En attente";
+
+        // Navigation : contrat formel associé
+        public Contrat? Contrat { get; set; }
+
+        // Navigation : historique des versements
+        public ICollection<Versement> Versements { get; set; } = new List<Versement>();
+
+        // Montant déjà payé (calculé dynamiquement depuis la somme des versements)
+        [NotMapped]
+        public decimal MontantPaye => Versements?.Sum(v => v.Montant) ?? 0;
+
+        // Reste à payer
+        [NotMapped]
+        public decimal ResteAPayer => Amount - MontantPaye;
     }
 }

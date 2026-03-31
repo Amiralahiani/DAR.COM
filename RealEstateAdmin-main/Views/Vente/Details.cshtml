@@ -1,0 +1,341 @@
+@model RealEstateAdmin.Services.SaleTransactionDetail
+
+@{
+    ViewData["Title"] = "Détails de la Transaction #" + Model.Transaction.Id;
+}
+
+<div class="container pb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="text-gradient mb-0">
+                <i class="bi bi-file-earmark-text"></i> Suivi de Vente #@Model.Transaction.Id
+            </h1>
+            <p class="text-muted">Gérez le contrat et les versements pour cette transaction.</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour aux ventes
+        </a>
+    </div>
+
+    <!-- Alertes messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- Colonne Gauche : Infos & Paiement -->
+        <div class="col-lg-8">
+            <!-- RÉSUMÉ FINANCIER -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="stat-card primary">
+                        <h2 class="stat-number">@Model.MontantTotal.ToString("N2") DT</h2>
+                        <p class="stat-label">Prix de vente</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card success">
+                        <h2 class="stat-number">@Model.MontantPaye.ToString("N2") DT</h2>
+                        <p class="stat-label">Total encaissé</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card @(Model.ResteAPayer > 0 ? "warning" : "success")">
+                        <h2 class="stat-number">@Model.ResteAPayer.ToString("N2") DT</h2>
+                        <p class="stat-label">Reste à payer</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HISTORIQUE DES VERSEMENTS -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history text-primary"></i> Historique des Versements</h5>
+                    @if (Model.StatutPaiement != "Complet")
+                    {
+                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#versementModal">
+                            <i class="bi bi-plus-lg"></i> Ajouter un versement
+                        </button>
+                    }
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Montant</th>
+                                    <th>Mode</th>
+                                    <th>Validé par</th>
+                                    <th>Note</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!Model.Versements.Any())
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted small italic">
+                                            Aucun versement enregistré pour le moment.
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    foreach (var v in Model.Versements)
+                                    {
+                                        <tr>
+                                            <td>@v.DateVersement.ToString("dd/MM/yyyy")</td>
+                                            <td class="fw-bold">@v.Montant.ToString("N2") DT</td>
+                                            <td><span class="badge bg-light text-dark">@v.ModePaiement</span></td>
+                                            <td class="small">@(v.AjouteParUser?.Nom ?? v.AjouteParUser?.Email ?? "Système")</td>
+                                            <td class="small text-muted">@v.Note</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INFOS BIEN & ACTEURS -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle text-primary"></i> Détails du Bien & Intervenants</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <h6 class="text-uppercase text-muted small fw-bold mb-3">Le Bien</h6>
+                            <div class="d-flex align-items-start mb-2">
+                                <i class="bi bi-house-door text-primary me-2 mt-1"></i>
+                                <div>
+                                    <div class="fw-bold">@Model.Transaction.BienImmobilier?.Titre</div>
+                                    <div class="small text-muted">@Model.Transaction.BienImmobilier?.Adresse</div>
+                                    <div class="small text-muted">Surface : @Model.Transaction.BienImmobilier?.Surface m²</div>
+                                </div>
+                            </div>
+                            <div class="badge @(Model.Transaction.BienImmobilier?.StatutCommercial == "Vendu" ? "bg-danger" : "bg-warning text-dark")">
+                                Statut : @Model.Transaction.BienImmobilier?.StatutCommercial
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-uppercase text-muted small fw-bold mb-3">Parties Prenantes</h6>
+                            <div class="mb-2">
+                                <span class="text-muted small">Acheteur :</span><br />
+                                <strong>@(Model.Transaction.Buyer?.Nom ?? Model.Transaction.Buyer?.Email)</strong>
+                            </div>
+                            <div class="mb-2">
+                                <span class="text-muted small">Vendeur :</span><br />
+                                <strong>@(Model.Transaction.Seller?.Nom ?? Model.Transaction.Seller?.Email)</strong>
+                            </div>
+                            <div>
+                                <span class="text-muted small">Agent :</span><br />
+                                <strong>@(Model.Transaction.Agent?.Nom ?? Model.Transaction.Agent?.Email ?? "Non assigné")</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne Droite : Contrat -->
+        <div class="col-lg-4">
+            <!-- CONTRAT SECTION -->
+            <div class="card border-0 shadow-sm border-top border-primary border-4 mb-4">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-file-earmark-check text-primary"></i> Contrat de Vente</h5>
+                    
+                    @if (Model.Contrat == null)
+                    {
+                        <div class="text-center py-3">
+                            <div class="mb-3 text-muted">Aucun contrat n'a été généré pour cette vente.</div>
+                            <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#contratModal">
+                                <i class="bi bi-magic"></i> Générer le contrat automatique
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">N° Contrat :</span>
+                                <span class="fw-bold">@Model.Contrat.NumeroContrat</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Statut :</span>
+                                <span class="badge @(Model.Contrat.ContractStatus == "Exécuté" ? "bg-success" : "bg-info")">@Model.Contrat.ContractStatus</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Date signature :</span>
+                                <span>@(Model.Contrat.DateSignature?.ToString("dd/MM/yyyy") ?? "-")</span>
+                            </div>
+                            @if (Model.Contrat.ContractStatus == "Exécuté")
+                            {
+                                <div class="mt-3 p-2 bg-light rounded small">
+                                    <i class="bi bi-check-all text-success"></i> Exécuté par <strong>@(Model.Contrat.ExecuteParUser?.Nom ?? Model.Contrat.ExecuteParUser?.Email)</strong>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary" onclick="printContrat()">
+                                <i class="bi bi-printer"></i> Imprimer le contrat
+                            </button>
+                            
+                            @if (Model.Contrat.ContractStatus != "Exécuté")
+                            {
+                                <form asp-action="ExecuteContrat" method="post" onsubmit="return confirm('Voulez-vous vraiment acter l'exécution finale de ce contrat ? Le bien sera définitivement marqué comme Vendu.')">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="contratId" value="@Model.Contrat.Id" />
+                                    <input type="hidden" name="saleId" value="@Model.Transaction.Id" />
+                                    <button type="submit" class="btn btn-success w-100">
+                                        <i class="bi bi-check-circle"></i> Acter l'exécution finale
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                        
+                        <div class="mt-4 small text-muted">
+                            <strong>Conditions particulières :</strong><br />
+                            @(string.IsNullOrWhiteSpace(Model.Contrat.ConditionsPaiement) ? "Aucune" : Model.Contrat.ConditionsPaiement)
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- NOTES -->
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body">
+                    <h6 class="fw-bold"><i class="bi bi-sticky text-warning"></i> Notes de transaction</h6>
+                    <p class="small text-muted mb-0">@(string.IsNullOrWhiteSpace(Model.Transaction.Notes) ? "Pas de notes spécifiques." : Model.Transaction.Notes)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal : Générer Contrat -->
+<div class="modal fade" id="contratModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="CreateContrat" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="saleId" value="@Model.Transaction.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Génération du Contrat Automatique</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted">Le contrat récupérera automatiquement les identités des parties et les informations du bien (Prix: @Model.MontantTotal.ToString("N2") DT).</p>
+                    <div class="mb-3">
+                        <label class="form-label font-weight-bold">Conditions de paiement / Délais</label>
+                        <textarea name="conditions" class="form-control" rows="4" placeholder="Ex: Paiement en 3 fois, Signature notaire le ..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Générer et Signer (Brouillon)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal : Ajouter Versement -->
+<div class="modal fade" id="versementModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="AddVersement" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="saleId" value="@Model.Transaction.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Nouveau Versement</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Montant du versement (DT)</label>
+                        <input type="number" name="montant" step="0.01" class="form-control" required max="@Model.ResteAPayer" value="@Model.ResteAPayer" />
+                        <div class="form-text">Reste à payer : <strong>@Model.ResteAPayer.ToString("N2") DT</strong></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mode de paiement</label>
+                        <select name="mode" class="form-select">
+                            @foreach (var m in Model.PaymentMethods)
+                            {
+                                <option value="@m">@m</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Note / Référence (Chèque N°, Virement...)</label>
+                        <input type="text" name="note" class="form-control" placeholder="Optionnel" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="submit" class="btn btn-success">Enregistrer le versement</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Zone d'impression invisible -->
+<div id="printArea" style="display:none;">
+    @if (Model.Contrat != null)
+    {
+        <div style="padding: 50px; font-family: 'Times New Roman', serif;">
+            <center><h1>CONTRAT DE VENTE IMMOBILIÈRE</h1></center>
+            <hr />
+            <p><strong>N° CONTRAT :</strong> @Model.Contrat.NumeroContrat</p>
+            <p><strong>Date :</strong> @(Model.Contrat.DateSignature?.ToString("dd MMMM yyyy") ?? "-")</p>
+            <br />
+            <h3>ENTRE LES SOUSSIGNÉS :</h3>
+            <p><strong>LE VENDEUR :</strong> @Model.Contrat.NomVendeur</p>
+            <p><strong>L'ACHETEUR :</strong> @Model.Contrat.NomAcheteur</p>
+            <br />
+            <h3>OBJET DU CONTRAT :</h3>
+            <p>La vente du bien immobilier suivant :</p>
+            <ul>
+                <li><strong>Titre :</strong> @Model.Contrat.TitreBien</li>
+                <li><strong>Adresse :</strong> @Model.Contrat.AdresseBien</li>
+                <li><strong>Surface :</strong> @Model.Contrat.SurfaceBien m²</li>
+            </ul>
+            <br />
+            <h3>PRIX ET CONDITIONS :</h3>
+            <p>Le prix de vente est fixé à <strong>@Model.Contrat.PrixContrat.ToString("N2") DT</strong>.</p>
+            <p><strong>Conditions particulières :</strong> @(Model.Contrat.ConditionsPaiement ?? "N/A")</p>
+            <br /><br /><br /><br />
+            <div style="display:flex; justify-content: space-between;">
+                <div>Signature Vendeur</div>
+                <div>Signature Acheteur</div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function printContrat() {
+            var printContents = document.getElementById('printArea').innerHTML;
+            var originalContents = document.body.innerHTML;
+            document.body.innerHTML = printContents;
+            window.print();
+            document.body.innerHTML = originalContents;
+            window.location.reload();
+        }
+    </script>
+}

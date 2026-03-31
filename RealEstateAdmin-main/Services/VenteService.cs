@@ -310,5 +310,228 @@ namespace RealEstateAdmin.Services
 
             return user.Id;
         }
+
+        // ─── Nouvelles méthodes ───────────────────────────────────────────────────
+
+        public async Task<BienDetailsDto?> GetBienDetailsAsync(int bienId)
+        {
+            var bien = await _context.Biens
+                .Include(b => b.User)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(b => b.Id == bienId);
+
+            if (bien == null) return null;
+
+            return new BienDetailsDto
+            {
+                Id = bien.Id,
+                Titre = bien.Titre,
+                Adresse = bien.Adresse,
+                Surface = bien.Surface,
+                Prix = bien.Prix,
+                VendeurNom = bien.User?.Nom ?? bien.User?.Email,
+                VendeurId = bien.UserId,
+                AgentId = bien.PublicationValidatedByAdminId,
+                StatutCommercial = bien.StatutCommercial
+            };
+        }
+
+        public async Task<ServiceResult<int>> CreateContratAsync(int saleTransactionId, string? conditionsPaiement, string? actorUserId)
+        {
+            var sale = await _context.Sales
+                .Include(s => s.BienImmobilier)
+                    .ThenInclude(b => b!.User)
+                .Include(s => s.Buyer)
+                .Include(s => s.Seller)
+                .Include(s => s.Agent)
+                .Include(s => s.Contrat)
+                .FirstOrDefaultAsync(s => s.Id == saleTransactionId);
+
+            if (sale == null)
+                return ServiceResult<int>.Fail(ServiceErrorCode.NotFound, "Transaction introuvable.");
+
+            if (sale.Contrat != null)
+                return ServiceResult<int>.Fail(ServiceErrorCode.BadRequest, "Un contrat existe déjà pour cette transaction.");
+
+            var numero = $"CONTRAT-{DateTime.Now:yyyyMMdd}-{saleTransactionId:D4}";
+
+            var contrat = new Contrat
+            {
+                SaleTransactionId = saleTransactionId,
+                NumeroContrat = numero,
+                DateSignature = DateTime.Today,
+                ContractStatus = "Signé",
+                NomAcheteur = sale.Buyer?.Nom ?? sale.Buyer?.Email,
+                NomVendeur = sale.Seller?.Nom ?? sale.Seller?.Email ?? sale.BienImmobilier?.User?.Nom,
+                NomAgent = sale.Agent?.Nom ?? sale.Agent?.Email,
+                TitreBien = sale.BienImmobilier?.Titre,
+                AdresseBien = sale.BienImmobilier?.Adresse,
+                SurfaceBien = sale.BienImmobilier?.Surface,
+                PrixContrat = sale.Amount,
+                ConditionsPaiement = conditionsPaiement,
+                DateCreation = DateTime.Now
+            };
+
+            _context.Contrats.Add(contrat);
+
+            // Mettre le bien en cours de vente (retrait du shop)
+            if (sale.BienImmobilier != null)
+            {
+                sale.BienImmobilier.StatutCommercial = "En cours de vente";
+                sale.BienImmobilier.IsPublished = false;
+                _context.Update(sale.BienImmobilier);
+            }
+
+            await _context.SaveChangesAsync();
+
+            await _auditLogService.LogAsync(actorUserId, "Create", "Contrat", contrat.Id,
+                $"Contrat {numero} créé pour la transaction #{saleTransactionId} — '{contrat.TitreBien}'.");
+
+            return ServiceResult<int>.Ok(contrat.Id, $"Contrat {numero} généré avec succès. Le bien est maintenant En cours de vente.");
+        }
+
+        public async Task<ServiceResult> ExecuteContratAsync(int contratId, string actorUserId)
+        {
+            var contrat = await _context.Contrats
+                .Include(c => c.SaleTransaction)
+                    .ThenInclude(s => s!.BienImmobilier)
+                .FirstOrDefaultAsync(c => c.Id == contratId);
+
+            if (contrat == null)
+                return ServiceResult.Fail(ServiceErrorCode.NotFound, "Contrat introuvable.");
+
+            if (contrat.ContractStatus == "Exécuté")
+                return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Ce contrat est déjà exécuté.");
+
+            if (contrat.ContractStatus == "Annulé")
+                return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Impossible d'exécuter un contrat annulé.");
+
+            contrat.ContractStatus = "Exécuté";
+            contrat.ExecutePar = actorUserId;
+            _context.Update(contrat);
+
+            // Marquer le bien comme vendu
+            var bien = contrat.SaleTransaction?.BienImmobilier;
+            if (bien != null)
+            {
+                bien.StatutCommercial = "Vendu";
+                bien.IsPublished = false;
+                _context.Update(bien);
+            }
+
+            // Mettre à jour le statut de transaction
+            if (contrat.SaleTransaction != null)
+            {
+                contrat.SaleTransaction.TransactionStatus = "Finalisée";
+                _context.Update(contrat.SaleTransaction);
+            }
+
+            await _context.SaveChangesAsync();
+
+            await _auditLogService.LogAsync(actorUserId, "Execute", "Contrat", contratId,
+                $"Contrat {contrat.NumeroContrat} exécuté — bien '{bien?.Titre}' marqué comme Vendu.");
+
+            return ServiceResult.Ok("Contrat exécuté. Le bien est maintenant marqué comme Vendu.");
+        }
+
+        public async Task<ServiceResult> AddVersementAsync(int saleId, decimal montant, string modePaiement, string? note, string actorUserId)
+        {
+            var sale = await _context.Sales
+                .Include(s => s.Versements)
+                .Include(s => s.Contrat)
+                .Include(s => s.BienImmobilier)
+                .FirstOrDefaultAsync(s => s.Id == saleId);
+
+            if (sale == null)
+                return ServiceResult.Fail(ServiceErrorCode.NotFound, "Transaction introuvable.");
+
+            // Règles métier
+            if (sale.StatutPaiementDetaille == "Complet")
+                return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Paiement déjà soldé. Aucun versement supplémentaire n'est possible.");
+
+            if (sale.Contrat?.ContractStatus == "Annulé")
+                return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Contrat annulé. Impossible d'ajouter un versement.");
+
+            var dejaPayé = sale.Versements.Sum(v => v.Montant);
+            var total = sale.Amount;
+
+            if (dejaPayé + montant > total)
+                return ServiceResult.Fail(ServiceErrorCode.Validation,
+                    $"Le versement ({montant:N2} DT) dépasse le montant restant à payer ({(total - dejaPayé):N2} DT). Versement rejeté.");
+
+            var versement = new Versement
+            {
+                SaleTransactionId = saleId,
+                Montant = montant,
+                DateVersement = DateTime.Today,
+                ModePaiement = modePaiement,
+                Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+                CreatedAt = DateTime.Now,
+                AjoutePar = actorUserId
+            };
+
+            _context.Versements.Add(versement);
+
+            // Recalculer le statut
+            var nouveauTotal = dejaPayé + montant;
+            if (nouveauTotal >= total)
+            {
+                sale.StatutPaiementDetaille = "Complet";
+                sale.PaymentStatus = "Payé";
+                sale.PaidAt = DateTime.Now;
+
+                // Bien vendu si paiement complet
+                if (sale.BienImmobilier != null)
+                {
+                    sale.BienImmobilier.StatutCommercial = "Vendu";
+                    sale.BienImmobilier.IsPublished = false;
+                    _context.Update(sale.BienImmobilier);
+                }
+            }
+            else
+            {
+                sale.StatutPaiementDetaille = "Partiel";
+            }
+
+            _context.Update(sale);
+            await _context.SaveChangesAsync();
+
+            await _auditLogService.LogAsync(actorUserId, "AddVersement", "SaleTransaction", saleId,
+                $"Versement {montant:N2} DT ({modePaiement}) ajouté — statut paiement : {sale.StatutPaiementDetaille}.");
+
+            return ServiceResult.Ok($"Versement de {montant:N2} DT enregistré. Statut : {sale.StatutPaiementDetaille}.");
+        }
+
+        public async Task<SaleTransactionDetail?> GetTransactionDetailAsync(int saleId)
+        {
+            var sale = await _context.Sales
+                .Include(s => s.BienImmobilier)
+                .Include(s => s.Buyer)
+                .Include(s => s.Seller)
+                .Include(s => s.Agent)
+                .Include(s => s.Contrat)
+                    .ThenInclude(c => c!.ExecuteParUser)
+                .Include(s => s.Versements)
+                    .ThenInclude(v => v.AjouteParUser)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == saleId);
+
+            if (sale == null) return null;
+
+            var montantPaye = sale.Versements.Sum(v => v.Montant);
+            var paymentMethods = await GetPaymentMethodsAsync();
+
+            return new SaleTransactionDetail
+            {
+                Transaction = sale,
+                Contrat = sale.Contrat,
+                Versements = sale.Versements.OrderBy(v => v.DateVersement).ToList(),
+                MontantTotal = sale.Amount,
+                MontantPaye = montantPaye,
+                ResteAPayer = sale.Amount - montantPaye,
+                StatutPaiement = sale.StatutPaiementDetaille,
+                PaymentMethods = paymentMethods
+            };
+        }
     }
 }

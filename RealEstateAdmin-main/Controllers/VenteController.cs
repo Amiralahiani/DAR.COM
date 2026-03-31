@@ -58,7 +58,8 @@ namespace RealEstateAdmin.Controllers
             if (result.Success)
             {
                 TempData["SuccessMessage"] = result.Message;
-                return RedirectToAction(nameof(Index));
+                // Rediriger vers les détails pour proposer de créer le contrat immédiatement
+                return RedirectToAction(nameof(Details), new { id = result.Data });
             }
 
             if (result.ErrorCode is ServiceErrorCode.BadRequest or ServiceErrorCode.NotFound or ServiceErrorCode.Validation)
@@ -71,19 +72,66 @@ namespace RealEstateAdmin.Controllers
             return HandleResult(result);
         }
 
+        // --- Nouvelles Actions ---
+
+        [HttpGet]
+        public async Task<IActionResult> GetBienDetails(int id)
+        {
+            var details = await _venteService.GetBienDetailsAsync(id);
+            if (details == null) return NotFound();
+            return Json(details);
+        }
+
+        public async Task<IActionResult> Details(int id)
+        {
+            var detail = await _venteService.GetTransactionDetailAsync(id);
+            if (detail == null) return NotFound();
+            return View(detail);
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdatePayment(int id, string paymentMethod, string paymentStatus)
+        public async Task<IActionResult> CreateContrat(int saleId, string? conditions)
         {
             var currentUser = await _userManager.GetUserAsync(User);
-            var result = await _venteService.UpdatePaymentAsync(id, paymentMethod, paymentStatus, currentUser?.Id);
+            var result = await _venteService.CreateContratAsync(saleId, conditions, currentUser?.Id);
+            
             if (result.Success)
-            {
                 TempData["SuccessMessage"] = result.Message;
-                return RedirectToAction(nameof(Index));
-            }
+            else
+                TempData["ErrorMessage"] = result.Message;
 
-            return HandleResult(result);
+            return RedirectToAction(nameof(Details), new { id = saleId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ExecuteContrat(int contratId, int saleId)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            var result = await _venteService.ExecuteContratAsync(contratId, currentUser?.Id ?? "System");
+            
+            if (result.Success)
+                TempData["SuccessMessage"] = result.Message;
+            else
+                TempData["ErrorMessage"] = result.Message;
+
+            return RedirectToAction(nameof(Details), new { id = saleId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddVersement(int saleId, decimal montant, string mode, string? note)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            var result = await _venteService.AddVersementAsync(saleId, montant, mode, note, currentUser?.Id ?? "System");
+            
+            if (result.Success)
+                TempData["SuccessMessage"] = result.Message;
+            else
+                TempData["ErrorMessage"] = result.Message;
+
+            return RedirectToAction(nameof(Details), new { id = saleId });
         }
 
         public async Task<IActionResult> ExportCsv()

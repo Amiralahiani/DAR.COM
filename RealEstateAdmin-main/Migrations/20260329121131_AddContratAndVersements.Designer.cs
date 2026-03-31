@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RealEstateAdmin.Data;
 
@@ -11,9 +12,11 @@ using RealEstateAdmin.Data;
 namespace RealEstateAdmin.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260329121131_AddContratAndVersements")]
+    partial class AddContratAndVersements
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -28,10 +31,12 @@ namespace RealEstateAdmin.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("varchar(450)");
 
-                    b.Property<int>("BiensVendus")
-                        .HasColumnType("int");
+                    b.Property<double>("ConversionScore")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("double");
 
-                    b.Property<double>("DelaiMoyenVente")
+                    b.Property<double>("FeedbackScore")
+                        .HasPrecision(5, 2)
                         .HasColumnType("double");
 
                     b.Property<DateTime>("LastComputed")
@@ -39,24 +44,9 @@ namespace RealEstateAdmin.Migrations
                         .HasColumnType("datetime(6)")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
-                    b.Property<double>("SatisfactionClient")
+                    b.Property<double>("PunctualityScore")
+                        .HasPrecision(5, 2)
                         .HasColumnType("double");
-
-                    b.Property<double>("ScoreGlobal")
-                        .HasColumnType("double");
-
-                    b.Property<double>("TauxConversion")
-                        .HasColumnType("double");
-
-                    b.Property<double>("TauxPaiementComplet")
-                        .HasColumnType("double");
-
-                    b.Property<int>("TotalVisites")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("ValeurTotaleVendue")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("AgentId");
 
@@ -379,19 +369,16 @@ namespace RealEstateAdmin.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("varchar(450)");
 
+                    b.Property<decimal?>("ConversionRating")
+                        .HasColumnType("decimal(65,30)");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime(6)")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
-                    b.Property<int>("NbVisites")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
-
-                    b.Property<decimal?>("NoteClient")
-                        .HasPrecision(3, 2)
-                        .HasColumnType("decimal(3,2)");
+                    b.Property<decimal?>("FeedbackRating")
+                        .HasColumnType("decimal(65,30)");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
@@ -413,6 +400,9 @@ namespace RealEstateAdmin.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)")
                         .HasDefaultValue("En attente");
+
+                    b.Property<decimal?>("PunctualityRating")
+                        .HasColumnType("decimal(65,30)");
 
                     b.Property<string>("SellerId")
                         .HasMaxLength(450)

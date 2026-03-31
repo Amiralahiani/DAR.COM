@@ -15,6 +15,12 @@ namespace RealEstateAdmin.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            builder.Entity<ApplicationUser>(entity =>
+            {
+                entity.Property(e => e.DateInscription)
+                      .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            });
         }
     }
 }

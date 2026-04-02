@@ -39,9 +39,17 @@
 
                         <dt class="col-sm-4">Statut</dt>
                         <dd class="col-sm-8">
-                            @if (Model.Statut == "Traité")
+                            @if (Model.Statut == "Accepté")
                             {
-                                <span class="badge bg-success">Traité</span>
+                                <span class="badge bg-success">Accepté</span>
+                            }
+                            else if (Model.Statut == "Annulé")
+                            {
+                                <span class="badge bg-secondary">Annulé</span>
+                            }
+                            else if (Model.Statut == "Refusé")
+                            {
+                                <span class="badge bg-danger">Refusé</span>
                             }
                             else
                             {
@@ -54,7 +62,7 @@
 
                         @if (Model.DateTraitement.HasValue)
                         {
-                            <dt class="col-sm-4">Traité le</dt>
+                            <dt class="col-sm-4">Décidé le</dt>
                             <dd class="col-sm-8">@Model.DateTraitement.Value.ToString("dd/MM/yyyy HH:mm")</dd>
                         }
                     </dl>
@@ -74,18 +82,30 @@
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    @if (Model.Statut != "Traité")
+                    @if (Model.Statut == "Nouveau")
                     {
-                        <form asp-action="MarkTreated" asp-route-id="@Model.MessageId" method="post" class="d-grid">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-primary">
-                                Marquer traité
-                            </button>
-                        </form>
+                        <div class="d-grid gap-2">
+                            <form asp-action="Accept" asp-route-id="@Model.MessageId" method="post" class="d-grid">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-primary">
+                                    Accepter
+                                </button>
+                            </form>
+                            <form asp-action="Refuse" asp-route-id="@Model.MessageId" method="post" class="d-grid">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-danger">
+                                    Refuser
+                                </button>
+                            </form>
+                        </div>
+                    }
+                    else if (Model.Statut == "Accepté")
+                    {
+                        <div class="alert alert-success mb-0">Cet événement est déjà accepté.</div>
                     }
                     else
                     {
-                        <div class="alert alert-success mb-0">Cet événement est déjà traité.</div>
+                        <div class="alert alert-secondary mb-0">Cet événement est clôturé (@Model.Statut).</div>
                     }
                 </div>
             </div>

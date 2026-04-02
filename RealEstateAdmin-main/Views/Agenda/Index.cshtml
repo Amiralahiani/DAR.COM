@@ -84,9 +84,17 @@
                                     </td>
                                     <td>@item.AssigneeName</td>
                                     <td>
-                                        @if (item.Statut == "Traité")
+                                        @if (item.Statut == "Accepté")
                                         {
-                                            <span class="badge bg-success">Traité</span>
+                                            <span class="badge bg-success">Accepté</span>
+                                        }
+                                        else if (item.Statut == "Annulé")
+                                        {
+                                            <span class="badge bg-secondary">Annulé</span>
+                                        }
+                                        else if (item.Statut == "Refusé")
+                                        {
+                                            <span class="badge bg-danger">Refusé</span>
                                         }
                                         else
                                         {
@@ -97,11 +105,15 @@
                                         <a asp-action="Details" asp-route-id="@item.MessageId" class="btn btn-sm btn-outline-secondary me-1">
                                             Détails
                                         </a>
-                                        @if (item.Statut != "Traité")
+                                        @if (item.Statut == "Nouveau")
                                         {
-                                            <form asp-action="MarkTreated" asp-route-id="@item.MessageId" method="post" class="d-inline">
+                                            <form asp-action="Accept" asp-route-id="@item.MessageId" method="post" class="d-inline">
                                                 @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-sm btn-outline-primary">Traiter</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">Accepter</button>
+                                            </form>
+                                            <form asp-action="Refuse" asp-route-id="@item.MessageId" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Refuser</button>
                                             </form>
                                         }
                                     </td>
@@ -133,6 +145,8 @@
                                 <th>Type</th>
                                 <th>Bien</th>
                                 <th>Client</th>
+                                <th>Statut</th>
+                                <th class="text-end">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -143,6 +157,40 @@
                                     <td>@item.EventType</td>
                                     <td>@item.BienTitre</td>
                                     <td>@item.ClientName</td>
+                                    <td>
+                                        @if (item.Statut == "Accepté")
+                                        {
+                                            <span class="badge bg-success">Accepté</span>
+                                        }
+                                        else if (item.Statut == "Annulé")
+                                        {
+                                            <span class="badge bg-secondary">Annulé</span>
+                                        }
+                                        else if (item.Statut == "Refusé")
+                                        {
+                                            <span class="badge bg-danger">Refusé</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">Nouveau</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <a asp-action="Details" asp-route-id="@item.MessageId" class="btn btn-sm btn-outline-secondary me-1">
+                                            Détails
+                                        </a>
+                                        @if (item.Statut == "Nouveau")
+                                        {
+                                            <form asp-action="Accept" asp-route-id="@item.MessageId" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">Accepter</button>
+                                            </form>
+                                            <form asp-action="Refuse" asp-route-id="@item.MessageId" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Refuser</button>
+                                            </form>
+                                        }
+                                    </td>
                                 </tr>
                             }
                         </tbody>

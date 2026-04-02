@@ -7,7 +7,6 @@ namespace RealEstateAdmin.Services
 {
     public class ShopService : IShopService
     {
-        private static readonly string[] TypeOptions = { "A Vendre", "A Louer" };
         private static readonly string[] StatusOptions = { "Disponible", "Réservé", "Vendu" };
         private static readonly int[] VisitSlotHours = { 9, 11, 14, 16 };
 
@@ -56,12 +55,10 @@ namespace RealEstateAdmin.Services
             var biensQuery = _context.Biens
                 .Include(b => b.User)
                 .Include(b => b.Images)
-                .Where(b => b.IsPublished || b.PublicationStatus == "Publié")
+                .Where(b => b.IsPublished && b.PublicationStatus == "Publié")
                 .Where(b =>
-                    b.DiscountPercent > 0
-                    || string.IsNullOrEmpty(b.TypeTransaction)
-                    || b.TypeTransaction == "A Vendre"
-                    || b.TypeTransaction == "A Louer")
+                    string.IsNullOrEmpty(b.TypeTransaction)
+                    || b.TypeTransaction == "A Vendre")
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(filter.Titre))
@@ -94,11 +91,6 @@ namespace RealEstateAdmin.Services
                 biensQuery = biensQuery.Where(b => b.Surface.HasValue && b.Surface.Value <= filter.SurfaceMax.Value);
             }
 
-            if (!string.IsNullOrWhiteSpace(filter.Type) && TypeOptions.Contains(filter.Type))
-            {
-                biensQuery = biensQuery.Where(b => b.TypeTransaction == filter.Type);
-            }
-
             if (!string.IsNullOrWhiteSpace(filter.Statut) && StatusOptions.Contains(filter.Statut))
             {
                 biensQuery = biensQuery.Where(b => b.StatutCommercial == filter.Statut);
@@ -120,7 +112,6 @@ namespace RealEstateAdmin.Services
             {
                 Biens = biens,
                 Filter = filter,
-                Types = TypeOptions,
                 Statuses = StatusOptions,
                 AvailableVisitSlotsByBien = visitSlotsByBien,
                 AgentDisplayByBien = agentDisplayByBien
@@ -353,7 +344,9 @@ namespace RealEstateAdmin.Services
 
             var targetIds = new HashSet<string>(agentIds, StringComparer.OrdinalIgnoreCase);
             var messages = await _context.Messages
-                .Where(m => m.Contenu != null && (m.Contenu.Contains("TYPE=VISITE") || m.Contenu.Contains("TYPE=RDV_AGENT")))
+                .Where(m => m.Statut == "Nouveau"
+                    && m.Contenu != null
+                    && (m.Contenu.Contains("TYPE=VISITE") || m.Contenu.Contains("TYPE=RDV_AGENT")))
                 .Select(m => new { m.Contenu })
                 .ToListAsync();
 
@@ -443,7 +436,7 @@ namespace RealEstateAdmin.Services
                 return (false, ServiceResult.Fail(ServiceErrorCode.Conflict, "Vous êtes déjà le propriétaire de ce bien."), null, null);
             }
 
-            if (bien.PublicationStatus != "Publié")
+            if (!bien.IsPublished || bien.PublicationStatus != "Publié")
             {
                 return (false, ServiceResult.Fail(ServiceErrorCode.Conflict, "Ce bien n'est pas publié."), null, null);
             }

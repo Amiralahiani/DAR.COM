@@ -116,7 +116,6 @@ namespace RealEstateAdmin.Data
                 entity.Property(e => e.PaymentStatus).HasMaxLength(50).HasDefaultValue("En attente");
                 entity.Property(e => e.TransactionStatus).HasMaxLength(50).HasDefaultValue("Finalisée");
                 entity.Property(e => e.StatutPaiementDetaille).HasMaxLength(50).HasDefaultValue("En attente");
-                entity.Property(e => e.NoteClient).HasPrecision(3, 2);
                 entity.Property(e => e.NbVisites).HasDefaultValue(0);
                 entity.Property(e => e.Notes).HasMaxLength(1000);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");

@@ -73,7 +73,6 @@ namespace RealEstateAdmin.Services
         public string? Adresse { get; set; }
         public int? SurfaceMin { get; set; }
         public int? SurfaceMax { get; set; }
-        public string? Type { get; set; }
         public string? Statut { get; set; }
         public string? Solde { get; set; }
     }
@@ -82,7 +81,6 @@ namespace RealEstateAdmin.Services
     {
         public IReadOnlyList<BienImmobilier> Biens { get; set; } = new List<BienImmobilier>();
         public ShopFilter Filter { get; set; } = new ShopFilter();
-        public IReadOnlyList<string> Types { get; set; } = new List<string>();
         public IReadOnlyList<string> Statuses { get; set; } = new List<string>();
         public IReadOnlyDictionary<int, IReadOnlyList<DateTime>> AvailableVisitSlotsByBien { get; set; }
             = new Dictionary<int, IReadOnlyList<DateTime>>();
@@ -172,6 +170,7 @@ namespace RealEstateAdmin.Services
         public int BienImmobilierId { get; set; }
 
         [Display(Name = "Acheteur")]
+        [Required(ErrorMessage = "Veuillez sélectionner l'acheteur.")]
         public string? BuyerId { get; set; }
 
         [Display(Name = "Vendeur")]
@@ -196,6 +195,11 @@ namespace RealEstateAdmin.Services
         [Display(Name = "Statut transaction")]
         [Required(ErrorMessage = "Le statut de transaction est obligatoire.")]
         public string TransactionStatus { get; set; } = "Finalisée";
+
+        [Display(Name = "Conditions du contrat")]
+        [Required(ErrorMessage = "Les conditions du contrat sont obligatoires.")]
+        [StringLength(2000, ErrorMessage = "Les conditions du contrat ne peuvent pas dépasser 2000 caractères.")]
+        public string? ConditionsPaiement { get; set; }
 
         [Display(Name = "Notes")]
         [StringLength(1000, ErrorMessage = "Les notes ne peuvent pas dépasser 1000 caractères.")]

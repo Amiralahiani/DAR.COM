@@ -13,6 +13,5 @@ namespace RealEstateAdmin.Services
         Task<Message?> GetByIdAsync(int id);
         Task<ServiceResult> DeleteAsync(int id, string? actorUserId);
         Task<ServiceResult> ReplyAsync(int messageId, string reponse, string? actorUserId);
-        Task<ServiceResult> MarkTreatedAsync(int id, string? actorUserId);
     }
 }

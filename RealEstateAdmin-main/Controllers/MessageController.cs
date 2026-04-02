@@ -169,22 +169,6 @@ namespace RealEstateAdmin.Controllers
             return HandleResult(result);
         }
 
-        // POST: Message/MarkTreated/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin,SuperAdmin")]
-        public async Task<IActionResult> MarkTreated(int id)
-        {
-            var currentUser = await _userManager.GetUserAsync(User);
-            var result = await _messageService.MarkTreatedAsync(id, currentUser?.Id);
-            if (result.Success)
-            {
-                return RedirectToAction(nameof(Index));
-            }
-
-            return HandleResult(result);
-        }
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "SuperAdmin")]

@@ -54,16 +54,6 @@
                     <input type="number" class="form-control" name="surfaceMax" value="@Model.Filter.SurfaceMax" placeholder="Max" />
                 </div>
                 <div class="col-md-6 col-xl-2">
-                    <label class="form-label">Type</label>
-                    <select class="form-select" name="type">
-                        <option value="">Tous</option>
-                        @foreach (var typeItem in Model.Types)
-                        {
-                            <option value="@typeItem" selected="@(Model.Filter.Type == typeItem)">@typeItem</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-6 col-xl-2">
                     <label class="form-label">Statut</label>
                     <select class="form-select" name="statut">
                         <option value="">Tous</option>

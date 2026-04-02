@@ -50,10 +50,6 @@ namespace RealEstateAdmin.Models
         [ForeignKey("AgentId")]
         public UserReference? Agent { get; set; }
 
-        [Range(0, 5)]
-        [Display(Name = "Satisfaction client")]
-        public decimal? NoteClient { get; set; }
-
         [Display(Name = "Nombre de visites")]
         public int NbVisites { get; set; } = 0;
 

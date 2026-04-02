@@ -12,7 +12,7 @@ namespace RealEstateAdmin.Services
         Task<byte[]> ExportPdfAsync();
 
         // Nouveau : récupérer les détails d'un bien pour auto-fill AJAX
-        Task<BienDetailsDto?> GetBienDetailsAsync(int bienId);
+        Task<BienDetailsDto?> GetBienDetailsAsync(int bienId, string? fallbackAgentUserId = null);
 
         // Nouveau : gestion des contrats
         Task<ServiceResult<int>> CreateContratAsync(int saleTransactionId, string? conditionsPaiement, string? actorUserId);
@@ -36,6 +36,7 @@ namespace RealEstateAdmin.Services
         public string? VendeurNom { get; set; }
         public string? VendeurId { get; set; }
         public string? AgentId { get; set; }
+        public string? AgentNom { get; set; }
         public string? StatutCommercial { get; set; }
     }
 

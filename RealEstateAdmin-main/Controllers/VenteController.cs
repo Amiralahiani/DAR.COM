@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using RealEstateAdmin.Models;
 using RealEstateAdmin.Services;
+using System.Globalization;
 
 namespace RealEstateAdmin.Controllers
 {
@@ -58,7 +59,7 @@ namespace RealEstateAdmin.Controllers
             if (result.Success)
             {
                 TempData["SuccessMessage"] = result.Message;
-                // Rediriger vers les détails pour proposer de créer le contrat immédiatement
+                // Le contrat est généré automatiquement pendant la saisie.
                 return RedirectToAction(nameof(Details), new { id = result.Data });
             }
 
@@ -77,7 +78,8 @@ namespace RealEstateAdmin.Controllers
         [HttpGet]
         public async Task<IActionResult> GetBienDetails(int id)
         {
-            var details = await _venteService.GetBienDetailsAsync(id);
+            var currentUser = await _userManager.GetUserAsync(User);
+            var details = await _venteService.GetBienDetailsAsync(id, currentUser?.Id);
             if (details == null) return NotFound();
             return Json(details);
         }
@@ -121,10 +123,16 @@ namespace RealEstateAdmin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddVersement(int saleId, decimal montant, string mode, string? note)
+        public async Task<IActionResult> AddVersement(int saleId, string? montant, string mode, string? note)
         {
+            if (!TryParseMontant(montant, out var parsedMontant))
+            {
+                TempData["ErrorMessage"] = "Montant invalide. Utilisez un nombre valide (ex: 1500.50 ou 1500,50).";
+                return RedirectToAction(nameof(Details), new { id = saleId });
+            }
+
             var currentUser = await _userManager.GetUserAsync(User);
-            var result = await _venteService.AddVersementAsync(saleId, montant, mode, note, currentUser?.Id ?? "System");
+            var result = await _venteService.AddVersementAsync(saleId, parsedMontant, mode, note, currentUser?.Id ?? "System");
             
             if (result.Success)
                 TempData["SuccessMessage"] = result.Message;
@@ -132,6 +140,36 @@ namespace RealEstateAdmin.Controllers
                 TempData["ErrorMessage"] = result.Message;
 
             return RedirectToAction(nameof(Details), new { id = saleId });
+        }
+
+        private static bool TryParseMontant(string? rawAmount, out decimal amount)
+        {
+            amount = 0m;
+            if (string.IsNullOrWhiteSpace(rawAmount))
+            {
+                return false;
+            }
+
+            var normalized = rawAmount.Trim();
+
+            if (decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.CurrentCulture, out amount))
+            {
+                return true;
+            }
+
+            if (decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out amount))
+            {
+                return true;
+            }
+
+            var fr = CultureInfo.GetCultureInfo("fr-FR");
+            if (decimal.TryParse(normalized, NumberStyles.Number, fr, out amount))
+            {
+                return true;
+            }
+
+            normalized = normalized.Replace(',', '.');
+            return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out amount);
         }
 
         public async Task<IActionResult> ExportCsv()

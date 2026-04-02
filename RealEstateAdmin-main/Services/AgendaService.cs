@@ -106,7 +106,7 @@ namespace RealEstateAdmin.Services
             });
         }
 
-        public async Task<ServiceResult> MarkEventTreatedAsync(int messageId, string actorUserId, bool actorIsSuperAdmin)
+        public async Task<ServiceResult> AcceptEventAsync(int messageId, string actorUserId, bool actorIsSuperAdmin)
         {
             var message = await _context.Messages.FirstOrDefaultAsync(m => m.Id == messageId);
             if (message == null)
@@ -125,19 +125,75 @@ namespace RealEstateAdmin.Services
                 return ServiceResult.Fail(ServiceErrorCode.Forbidden, "Accès refusé.");
             }
 
-            if (message.Statut == "Traité")
+            if (string.Equals(message.Statut, "Refusé", StringComparison.OrdinalIgnoreCase))
             {
-                return ServiceResult.Ok("Cet événement est déjà traité.");
+                return ServiceResult.Fail(ServiceErrorCode.Conflict, "Cet événement est déjà refusé.");
             }
 
-            message.Statut = "Traité";
+            var currentStatus = NormalizeAgendaStatus(message.Statut);
+            if (string.Equals(currentStatus, "Accepté", StringComparison.OrdinalIgnoreCase))
+            {
+                return ServiceResult.Ok("Cet événement est déjà accepté.");
+            }
+
+            message.Statut = "Accepté";
             message.DateTraitement = DateTime.Now;
             message.TraiteParId = actorUserId;
             _context.Update(message);
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(actorUserId, "Update", "Message", message.Id, "Événement agenda marqué traité.");
+            await _auditLogService.LogAsync(actorUserId, "Update", "Message", message.Id, "Événement agenda accepté.");
 
-            return ServiceResult.Ok("Événement marqué comme traité.");
+            return ServiceResult.Ok("Événement accepté.");
+        }
+
+        public Task<ServiceResult> RefuseEventAsync(int messageId, string actorUserId, bool actorIsSuperAdmin)
+        {
+            return UpdateEventStatusAsync(messageId, "Refusé", actorUserId, actorIsSuperAdmin, "Événement agenda refusé.");
+        }
+
+        private async Task<ServiceResult> UpdateEventStatusAsync(
+            int messageId,
+            string targetStatus,
+            string actorUserId,
+            bool actorIsSuperAdmin,
+            string auditDetails)
+        {
+            var message = await _context.Messages.FirstOrDefaultAsync(m => m.Id == messageId);
+            if (message == null)
+            {
+                return ServiceResult.Fail(ServiceErrorCode.NotFound, "Événement introuvable.");
+            }
+
+            var projection = BuildProjection(message);
+            if (projection == null)
+            {
+                return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Ce message n'est pas un événement d'agenda.");
+            }
+
+            if (!CanActorSeeEvent(actorUserId, actorIsSuperAdmin, projection.AssignedToUserId, projection.AssignmentStatus))
+            {
+                return ServiceResult.Fail(ServiceErrorCode.Forbidden, "Accès refusé.");
+            }
+
+            var currentStatus = NormalizeAgendaStatus(message.Statut);
+            if (string.Equals(currentStatus, "Accepté", StringComparison.OrdinalIgnoreCase))
+            {
+                return ServiceResult.Fail(ServiceErrorCode.Conflict, "Cet événement est déjà accepté.");
+            }
+
+            if (string.Equals(currentStatus, targetStatus, StringComparison.OrdinalIgnoreCase))
+            {
+                return ServiceResult.Ok($"Cet événement est déjà {targetStatus.ToLowerInvariant()}.");
+            }
+
+            message.Statut = targetStatus;
+            message.DateTraitement = DateTime.Now;
+            message.TraiteParId = actorUserId;
+            _context.Update(message);
+            await _context.SaveChangesAsync();
+            await _auditLogService.LogAsync(actorUserId, "Update", "Message", message.Id, auditDetails);
+
+            return ServiceResult.Ok($"Événement {targetStatus.ToLowerInvariant()}.");
         }
 
         private static bool CanActorSeeEvent(
@@ -219,7 +275,7 @@ namespace RealEstateAdmin.Services
                     ClientEmail = message.Email ?? string.Empty,
                     AssigneeName = assignee ?? "-",
                     AssignmentStatus = assignmentStatus,
-                    Statut = message.Statut
+                    Statut = NormalizeAgendaStatus(message.Statut)
                 },
                 assignedToUserId,
                 assignmentStatus);
@@ -258,6 +314,26 @@ namespace RealEstateAdmin.Services
             }
 
             return null;
+        }
+
+        private static string NormalizeAgendaStatus(string? status)
+        {
+            if (string.Equals(status, "Nouveau", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Nouveau";
+            }
+
+            if (string.Equals(status, "Refusé", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Refusé";
+            }
+
+            if (string.Equals(status, "Accepté", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Accepté";
+            }
+
+            return "Accepté";
         }
 
         private sealed record AgendaProjection(AgendaEvent Event, string? AssignedToUserId, string AssignmentStatus);

@@ -35,11 +35,11 @@ namespace RealEstateAdmin.Models
         [StringLength(50)]
         public string Statut { get; set; } = "Nouveau";
 
-        [Display(Name = "Traité par")]
+        [Display(Name = "Géré par")]
         [StringLength(450)]
         public string? TraiteParId { get; set; }
 
-        [Display(Name = "Date de traitement")]
+        [Display(Name = "Date de décision")]
         [DataType(DataType.DateTime)]
         public DateTime? DateTraitement { get; set; }
     }

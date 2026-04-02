@@ -31,6 +31,31 @@
         return string.Equals(type, "VISITE", StringComparison.OrdinalIgnoreCase)
             || string.Equals(type, "RDV_AGENT", StringComparison.OrdinalIgnoreCase);
     }
+
+    string NormalizeStatus(RealEstateAdmin.Models.Message message)
+    {
+        if (string.Equals(message.Statut, "Nouveau", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Nouveau";
+        }
+
+        if (string.Equals(message.Statut, "Refusé", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Refusé";
+        }
+
+        if (string.Equals(message.Statut, "Accepté", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Accepté";
+        }
+
+        if (string.Equals(message.Statut, "Répondu", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Répondu";
+        }
+
+        return IsVisitOrMeetingMessage(message) ? "Accepté" : "Répondu";
+    }
 }
 
 <div class="container">
@@ -92,6 +117,7 @@
                         @foreach (var item in Model)
                         {
                             var isVisitOrMeeting = IsVisitOrMeetingMessage(item);
+                            var normalizedStatus = NormalizeStatus(item);
                             var assignmentStatus = ReadMetadata(item.Contenu, "ASSIGNMENT_STATUS");
                             var assignedToName = ReadMetadata(item.Contenu, "ASSIGNED_TO_NAME");
                             var isPendingSuperAdmin = string.Equals(assignmentStatus, "PENDING_SUPERADMIN", StringComparison.OrdinalIgnoreCase);
@@ -133,9 +159,21 @@
                                     }
                                 </td>
                                 <td>
-                                    @if (item.Statut == "Traité")
+                                    @if (normalizedStatus == "Répondu")
                                     {
-                                        <span class="badge bg-success">Traité</span>
+                                        <span class="badge bg-success">Répondu</span>
+                                    }
+                                    else if (item.Statut == "Annulé")
+                                    {
+                                        <span class="badge bg-secondary">Annulé</span>
+                                    }
+                                    else if (normalizedStatus == "Refusé")
+                                    {
+                                        <span class="badge bg-danger">Refusé</span>
+                                    }
+                                    else if (normalizedStatus == "Accepté")
+                                    {
+                                        <span class="badge bg-success">Accepté</span>
                                     }
                                     else
                                     {
@@ -172,15 +210,6 @@
                                         <a asp-action="Reply" asp-route-id="@item.Id" class="btn btn-sm btn-success">
                                             <i class="bi bi-reply"></i> Répondre
                                         </a>
-                                        @if (item.Statut != "Traité")
-                                        {
-                                            <form asp-action="MarkTreated" asp-route-id="@item.Id" method="post" class="d-inline">
-                                                @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-sm btn-outline-primary">
-                                                    Traiter
-                                                </button>
-                                            </form>
-                                        }
                                         <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">
                                             <i class="bi bi-trash"></i>
                                         </a>

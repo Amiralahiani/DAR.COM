@@ -39,18 +39,19 @@ Si le port est occupe:
 dotnet run --project .\RealEstateAdmin-main\RealEstateAdmin.csproj --urls "http://localhost:5180"
 ```
 
-## Comptes admin auto (optionnel, dev)
+## Comptes equipe centralises
 
-Definir ces variables dans le terminal AVANT `dotnet run`:
+Les comptes prets a l'emploi sont centralises dans:
 
-```powershell
-$env:DAR_BOOTSTRAP_SUPERADMIN_EMAIL="superadmin@admin.com"
-$env:DAR_BOOTSTRAP_SUPERADMIN_PASSWORD="MotDePasse123!"
-$env:DAR_BOOTSTRAP_ADMIN_EMAIL="admin@admin.com"
-$env:DAR_BOOTSTRAP_ADMIN_PASSWORD="MotDePasse123!"
-```
+- `RealEstateAdmin-main/appsettings.json`
+- `RealEstateAdmin-main/appsettings.Development.json`
 
-Sans ces variables, l'application demarre quand meme, mais les comptes admin ne sont pas crees automatiquement.
+Cle de configuration:
+
+- `Bootstrap:SeedDefaultAccounts` active le bootstrap au demarrage
+- `Bootstrap:ForcePasswordResetOnStartup` remet les mots de passe configures a chaque lancement
+- `Bootstrap:DisablePublicRegistration` bloque l'inscription libre et force l'usage des comptes equipes
+- `Bootstrap:TeamAccounts` contient toute la liste des comptes (SuperAdmin/Admin/Utilisateur)
 
 
 ## Fichiers a ne pas commit

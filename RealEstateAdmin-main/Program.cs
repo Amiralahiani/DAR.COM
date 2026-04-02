@@ -59,6 +59,7 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAgendaService, AgendaService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IAgentPerformanceService, AgentPerformanceService>();
+builder.Services.AddScoped<IStartupAccountSeeder, StartupAccountSeeder>();
 builder.Services.AddHttpClient();
 
 // Add services to the container.
@@ -67,7 +68,11 @@ builder.Services.AddControllersWithViews();
 var app = builder.Build();
 QuestPDF.Settings.License = LicenseType.Community;
 
-// Démarrage: Le bootstrap initial (migrations et seeding) a été effectué manuellement pour éviter les conflits de contextes.
+using (var scope = app.Services.CreateScope())
+{
+    var startupAccountSeeder = scope.ServiceProvider.GetRequiredService<IStartupAccountSeeder>();
+    await startupAccountSeeder.SeedAsync();
+}
 
 
 

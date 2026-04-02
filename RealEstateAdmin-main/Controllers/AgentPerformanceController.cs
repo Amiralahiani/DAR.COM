@@ -22,8 +22,29 @@ namespace RealEstateAdmin.Controllers
         {
             var list = await _performanceService.GetAllViewModelsAsync();
             var sortedList = list.OrderByDescending(p => p.ScoreGlobal).ToList();
+            ViewBag.IsSuperAdmin = User.IsInRole("SuperAdmin");
             ViewBag.CurrentUserId = _userManager.GetUserId(User);
             return View(sortedList);
+        }
+
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<IActionResult> Details(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return NotFound();
+            }
+
+            var list = await _performanceService.GetAllViewModelsAsync();
+            var sortedList = list.OrderByDescending(p => p.ScoreGlobal).ToList();
+            var model = sortedList.FirstOrDefault(p => string.Equals(p.AgentId, id, StringComparison.OrdinalIgnoreCase));
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            ViewBag.Rank = sortedList.FindIndex(p => string.Equals(p.AgentId, id, StringComparison.OrdinalIgnoreCase)) + 1;
+            return View(model);
         }
 
         [HttpPost]

@@ -62,11 +62,15 @@
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history text-primary"></i> Historique des Versements</h5>
-                    @if (Model.StatutPaiement != "Complet")
+                    @if (Model.Contrat != null && Model.Contrat.ContractStatus != "Annulé" && Model.StatutPaiement != "Complet")
                     {
                         <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#versementModal">
                             <i class="bi bi-plus-lg"></i> Ajouter un versement
                         </button>
+                    }
+                    else if (Model.Contrat == null)
+                    {
+                        <span class="badge bg-warning text-dark">Contrat requis avant versement</span>
                     }
                 </div>
                 <div class="card-body p-0">
@@ -159,11 +163,9 @@
                     
                     @if (Model.Contrat == null)
                     {
-                        <div class="text-center py-3">
-                            <div class="mb-3 text-muted">Aucun contrat n'a été généré pour cette vente.</div>
-                            <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#contratModal">
-                                <i class="bi bi-magic"></i> Générer le contrat automatique
-                            </button>
+                        <div class="alert alert-warning mb-0 small">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Contrat manquant. Cette transaction est incomplète et aucun versement ne peut être saisi tant que le contrat n'existe pas.
                         </div>
                     }
                     else
@@ -226,33 +228,6 @@
     </div>
 </div>
 
-<!-- Modal : Générer Contrat -->
-<div class="modal fade" id="contratModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form asp-action="CreateContrat" method="post">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="saleId" value="@Model.Transaction.Id" />
-                <div class="modal-header">
-                    <h5 class="modal-title">Génération du Contrat Automatique</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="small text-muted">Le contrat récupérera automatiquement les identités des parties et les informations du bien (Prix: @Model.MontantTotal.ToString("N2") DT).</p>
-                    <div class="mb-3">
-                        <label class="form-label font-weight-bold">Conditions de paiement / Délais</label>
-                        <textarea name="conditions" class="form-control" rows="4" placeholder="Ex: Paiement en 3 fois, Signature notaire le ..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Générer et Signer (Brouillon)</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <!-- Modal : Ajouter Versement -->
 <div class="modal fade" id="versementModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
@@ -267,7 +242,13 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Montant du versement (DT)</label>
-                        <input type="number" name="montant" step="0.01" class="form-control" required max="@Model.ResteAPayer" value="@Model.ResteAPayer" />
+                        <input type="number"
+                               name="montant"
+                               step="0.01"
+                               class="form-control"
+                               required
+                               max="@Model.ResteAPayer.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                               value="@Model.ResteAPayer.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                         <div class="form-text">Reste à payer : <strong>@Model.ResteAPayer.ToString("N2") DT</strong></div>
                     </div>
                     <div class="mb-3">

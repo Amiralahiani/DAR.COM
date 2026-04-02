@@ -42,9 +42,15 @@ namespace RealEstateAdmin.Services
         public async Task<IReadOnlyList<Message>> GetMessagesAsync(string? actorUserId, bool actorIsSuperAdmin)
         {
             var messages = await _context.Messages
+                .AsNoTracking()
                 .OrderBy(m => m.Statut == "Nouveau" ? 0 : 1)
                 .ThenByDescending(m => m.DateCreation)
                 .ToListAsync();
+
+            foreach (var message in messages)
+            {
+                message.Statut = NormalizeMessageStatus(message.Statut, IsVisitOrMeetingMessage(message));
+            }
 
             if (actorIsSuperAdmin || string.IsNullOrWhiteSpace(actorUserId))
             {
@@ -214,7 +220,14 @@ namespace RealEstateAdmin.Services
 
         public async Task<Message?> GetByIdAsync(int id)
         {
-            return await _context.Messages.FirstOrDefaultAsync(m => m.Id == id);
+            var message = await _context.Messages.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id);
+            if (message == null)
+            {
+                return null;
+            }
+
+            message.Statut = NormalizeMessageStatus(message.Statut, IsVisitOrMeetingMessage(message));
+            return message;
         }
 
         public async Task<ServiceResult> DeleteAsync(int id, string? actorUserId)
@@ -245,33 +258,18 @@ namespace RealEstateAdmin.Services
                 await _emailSender.SendEmailAsync(message.Email, subject, reponse.Replace("\n", "<br/>"));
             }
 
-            message.Statut = "Traité";
-            message.DateTraitement = DateTime.Now;
-            message.TraiteParId = actorUserId;
+            if (!IsVisitOrMeetingMessage(message))
+            {
+                message.Statut = "Répondu";
+                message.DateTraitement = DateTime.Now;
+                message.TraiteParId = actorUserId;
+            }
+
             _context.Update(message);
             await _context.SaveChangesAsync();
             await _auditLogService.LogAsync(actorUserId, "Reply", "Message", message.Id, $"Réponse envoyée: {message.Sujet}");
 
             return ServiceResult.Ok("Réponse envoyée avec succès.");
-        }
-
-        public async Task<ServiceResult> MarkTreatedAsync(int id, string? actorUserId)
-        {
-            var message = await _context.Messages.FindAsync(id);
-            if (message == null)
-            {
-                return ServiceResult.Fail(ServiceErrorCode.NotFound, "Message introuvable.");
-            }
-
-            message.Statut = "Traité";
-            message.DateTraitement = DateTime.Now;
-            message.TraiteParId = actorUserId;
-
-            _context.Update(message);
-            await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(actorUserId, "Update", "Message", message.Id, $"Message traité: {message.Sujet}");
-
-            return ServiceResult.Ok();
         }
 
         private static bool CanBeHandledByAdmin(Message message, string actorUserId)
@@ -372,6 +370,31 @@ namespace RealEstateAdmin.Services
         private static string NormalizeMetadataValue(string? value)
         {
             return (value ?? string.Empty).Replace('\r', ' ').Replace('\n', ' ').Trim();
+        }
+
+        private static string NormalizeMessageStatus(string? status, bool isVisitOrMeeting)
+        {
+            if (string.Equals(status, "Nouveau", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Nouveau";
+            }
+
+            if (string.Equals(status, "Refusé", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Refusé";
+            }
+
+            if (string.Equals(status, "Accepté", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Accepté";
+            }
+
+            if (string.Equals(status, "Répondu", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Répondu";
+            }
+
+            return isVisitOrMeeting ? "Accepté" : "Répondu";
         }
     }
 }

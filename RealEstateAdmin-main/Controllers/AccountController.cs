@@ -93,6 +93,12 @@ namespace RealEstateAdmin.Controllers
         [AllowAnonymous]
         public IActionResult Register(string? returnUrl = null)
         {
+            if (IsPublicRegistrationDisabled())
+            {
+                TempData["ErrorMessage"] = "Inscription publique désactivée. Utilisez un compte d'équipe.";
+                return RedirectToAction(nameof(Login), new { returnUrl });
+            }
+
             ViewData["ReturnUrl"] = returnUrl;
             return View();
         }
@@ -102,6 +108,12 @@ namespace RealEstateAdmin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterViewModel model, string? returnUrl = null)
         {
+            if (IsPublicRegistrationDisabled())
+            {
+                TempData["ErrorMessage"] = "Inscription publique désactivée. Utilisez un compte d'équipe.";
+                return RedirectToAction(nameof(Login), new { returnUrl });
+            }
+
             ViewData["ReturnUrl"] = returnUrl;
 
             if (!ModelState.IsValid)
@@ -273,6 +285,11 @@ namespace RealEstateAdmin.Controllers
         {
             return !string.IsNullOrWhiteSpace(_configuration["Smtp:Host"])
                 && !string.IsNullOrWhiteSpace(_configuration["Smtp:From"]);
+        }
+
+        private bool IsPublicRegistrationDisabled()
+        {
+            return _configuration.GetValue<bool>("Bootstrap:DisablePublicRegistration");
         }
 
         private async Task<bool> IsEmailDomainReachableAsync(string email)

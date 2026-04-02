@@ -12,7 +12,6 @@ namespace RealEstateAdmin.Models
         public decimal ValeurTotaleVendue { get; set; }
         public double TauxConversion { get; set; }
         public double DelaiMoyenVente { get; set; }
-        public double SatisfactionClient { get; set; }
         public int TotalVisites { get; set; }
         public double TauxPaiementComplet { get; set; }
         

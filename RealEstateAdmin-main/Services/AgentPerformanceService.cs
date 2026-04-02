@@ -19,10 +19,7 @@ namespace RealEstateAdmin.Services
 
         public async Task RecomputeAllAsync()
         {
-            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
-            var superAdmins = await _userManager.GetUsersInRoleAsync("SuperAdmin");
-            var superAdminIds = new HashSet<string>(superAdmins.Select(u => u.Id), StringComparer.OrdinalIgnoreCase);
-            var agents = adminUsers.Where(u => !superAdminIds.Contains(u.Id)).ToList();
+            var agents = await GetTrackedAgentsAsync();
 
             if (!agents.Any()) return;
 
@@ -39,9 +36,18 @@ namespace RealEstateAdmin.Services
                 int biensVendus = sales.Count;
                 decimal valeurTotale = sales.Sum(s => s.Amount);
 
+                var allAgentSales = await _context.Sales.CountAsync(s => s.AgentId == agent.Id);
+
                 // 2. Taux de Conversion (Vendus / Assignés)
                 // On considère "Assignés" comme les biens validés par cet agent
                 var assignesCount = await _context.Biens.CountAsync(b => b.PublicationValidatedByAdminId == agent.Id);
+                if (assignesCount == 0)
+                {
+                    // Fallback: si l'agent ne valide pas de publications (cas agents non-admin),
+                    // on mesure la conversion sur les transactions qui lui sont réellement affectées.
+                    assignesCount = allAgentSales;
+                }
+
                 double conversion = assignesCount == 0 ? 0 : (double)biensVendus * 100.0 / assignesCount;
 
                 // 3. Délai Moyen de Vente (jours)
@@ -57,15 +63,10 @@ namespace RealEstateAdmin.Services
                     delaiMoyen = totalDays / biensVendus;
                 }
 
-                // 4. Satisfaction Client
-                var ratings = sales.Where(s => s.NoteClient.HasValue).Select(s => (double)s.NoteClient!.Value).ToList();
-                double satisfaction = ratings.Any() ? ratings.Average() : 0;
-
-                // 5. Nombre de Visites
+                // 4. Nombre de Visites
                 int totalVisites = sales.Sum(s => s.NbVisites);
 
-                // 6. Taux de Paiement Complet
-                var allAgentSales = await _context.Sales.CountAsync(s => s.AgentId == agent.Id);
+                // 5. Taux de Paiement Complet
                 var completePayments = await _context.Sales.CountAsync(s => s.AgentId == agent.Id && s.StatutPaiementDetaille == "Complet");
                 double tauxPaiement = allAgentSales == 0 ? 0 : (double)completePayments * 100.0 / allAgentSales;
 
@@ -80,7 +81,6 @@ namespace RealEstateAdmin.Services
                 perf.ValeurTotaleVendue = valeurTotale;
                 perf.TauxConversion = conversion;
                 perf.DelaiMoyenVente = delaiMoyen;
-                perf.SatisfactionClient = satisfaction;
                 perf.TotalVisites = totalVisites;
                 perf.TauxPaiementComplet = tauxPaiement;
                 perf.LastComputed = DateTime.Now;
@@ -105,12 +105,10 @@ namespace RealEstateAdmin.Services
                 double p3 = (s.TauxConversion / 100.0) * 20.0;
                 // Délai (15%) : On considère 30 jours comme "parfait", plus c'est long, moins on a de points
                 double p4 = s.DelaiMoyenVente <= 30 ? 15.0 : Math.Max(0, 15.0 - ((s.DelaiMoyenVente - 30) / 10.0));
-                // Satisfaction (10%)
-                double p5 = (s.SatisfactionClient / 5.0) * 10.0;
-                // Paiement (10%)
-                double p6 = (s.TauxPaiementComplet / 100.0) * 10.0;
+                // Paiement (20%)
+                double p5 = (s.TauxPaiementComplet / 100.0) * 20.0;
 
-                s.ScoreGlobal = Math.Min(100.0, p1 + p2 + p3 + p4 + p5 + p6);
+                s.ScoreGlobal = Math.Min(100.0, p1 + p2 + p3 + p4 + p5);
             }
 
             await _context.SaveChangesAsync();
@@ -123,11 +121,7 @@ namespace RealEstateAdmin.Services
 
         public async Task<IReadOnlyList<AgentPerformanceViewModel>> GetAllViewModelsAsync()
         {
-            // Get all Admin users excluding SuperAdmins
-            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
-            var superAdmins = await _userManager.GetUsersInRoleAsync("SuperAdmin");
-            var superAdminIds = new HashSet<string>(superAdmins.Select(u => u.Id), StringComparer.OrdinalIgnoreCase);
-            var agents = adminUsers.Where(u => !superAdminIds.Contains(u.Id)).ToList();
+            var agents = await GetTrackedAgentsAsync();
 
             // Load all existing performance records
             var perfMap = (await _context.AgentPerformances.AsNoTracking().ToListAsync())
@@ -150,7 +144,6 @@ namespace RealEstateAdmin.Services
                     ValeurTotaleVendue = p?.ValeurTotaleVendue ?? 0,
                     TauxConversion = p?.TauxConversion ?? 0,
                     DelaiMoyenVente = p?.DelaiMoyenVente ?? 0,
-                    SatisfactionClient = p?.SatisfactionClient ?? 0,
                     TotalVisites = p?.TotalVisites ?? 0,
                     TauxPaiementComplet = p?.TauxPaiementComplet ?? 0,
                     ScoreGlobal = p?.ScoreGlobal ?? 0,
@@ -160,6 +153,52 @@ namespace RealEstateAdmin.Services
             }
 
             return result;
+        }
+
+        private async Task<List<ApplicationUser>> GetTrackedAgentsAsync()
+        {
+            var superAdmins = await _userManager.GetUsersInRoleAsync("SuperAdmin");
+            var superAdminIds = new HashSet<string>(superAdmins.Select(u => u.Id), StringComparer.OrdinalIgnoreCase);
+
+            var tracked = new Dictionary<string, ApplicationUser>(StringComparer.OrdinalIgnoreCase);
+
+            // 1) Inclure les Admins (hors SuperAdmin)
+            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+            foreach (var admin in adminUsers)
+            {
+                if (!superAdminIds.Contains(admin.Id))
+                {
+                    tracked[admin.Id] = admin;
+                }
+            }
+
+            // 2) Inclure aussi les utilisateurs réellement affectés comme agent dans les transactions
+            //    (même s'ils n'ont pas le rôle Admin).
+            var agentIdsInSales = await _context.Sales
+                .AsNoTracking()
+                .Where(s => !string.IsNullOrWhiteSpace(s.AgentId))
+                .Select(s => s.AgentId!)
+                .Distinct()
+                .ToListAsync();
+
+            if (agentIdsInSales.Count > 0)
+            {
+                var salesAgents = await _userManager.Users
+                    .Where(u => agentIdsInSales.Contains(u.Id))
+                    .ToListAsync();
+
+                foreach (var agent in salesAgents)
+                {
+                    if (!superAdminIds.Contains(agent.Id))
+                    {
+                        tracked[agent.Id] = agent;
+                    }
+                }
+            }
+
+            return tracked.Values
+                .OrderBy(u => u.Nom ?? u.UserName ?? u.Email ?? u.Id)
+                .ToList();
         }
     }
 }

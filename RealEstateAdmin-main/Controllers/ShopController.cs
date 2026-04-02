@@ -6,6 +6,7 @@ using RealEstateAdmin.Services;
 
 namespace RealEstateAdmin.Controllers
 {
+    [Authorize]
     public class ShopController : Controller
     {
         private readonly IShopService _shopService;
@@ -25,11 +26,10 @@ namespace RealEstateAdmin.Controllers
             string? adresse,
             int? surfaceMin,
             int? surfaceMax,
-            string? type,
             string? statut,
             string? solde)
         {
-            var filter = BuildFilter(titre, prixMin, prixMax, adresse, surfaceMin, surfaceMax, type, statut, solde);
+            var filter = BuildFilter(titre, prixMin, prixMax, adresse, surfaceMin, surfaceMax, statut, solde);
 
             var data = await _shopService.GetIndexDataAsync(filter);
 
@@ -45,10 +45,9 @@ namespace RealEstateAdmin.Controllers
             string? adresse,
             int? surfaceMin,
             int? surfaceMax,
-            string? type,
             string? statut)
         {
-            var filter = BuildFilter(titre, prixMin, prixMax, adresse, surfaceMin, surfaceMax, type, statut, "1");
+            var filter = BuildFilter(titre, prixMin, prixMax, adresse, surfaceMin, surfaceMax, statut, "1");
 
             var data = await _shopService.GetSoldeDataAsync(filter);
 
@@ -140,7 +139,6 @@ namespace RealEstateAdmin.Controllers
             string? adresse,
             int? surfaceMin,
             int? surfaceMax,
-            string? type,
             string? statut,
             string? solde)
         {
@@ -152,7 +150,6 @@ namespace RealEstateAdmin.Controllers
                 Adresse = adresse,
                 SurfaceMin = surfaceMin,
                 SurfaceMax = surfaceMax,
-                Type = type,
                 Statut = statut,
                 Solde = solde
             };

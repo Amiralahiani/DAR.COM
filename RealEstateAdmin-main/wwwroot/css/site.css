@@ -287,8 +287,15 @@ body::before {
 }
 
 @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
 }
 
 .property-price {
@@ -627,6 +634,7 @@ body::before {
         opacity: 0;
         transform: translateY(30px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -657,11 +665,11 @@ body::before {
         padding: 3rem 0;
         border-radius: 0 0 40px 40px;
     }
-    
+
     .property-card {
         margin-bottom: 1.5rem;
     }
-    
+
     .stat-card {
         margin-bottom: 1rem;
     }
@@ -708,7 +716,12 @@ body::before {
 }
 
 /* Page titles */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
     font-weight: 700;
     color: var(--ink);
     margin-bottom: 1rem;
@@ -1499,4 +1512,280 @@ h6 {
 
 .icon-terracotta {
     color: #c0563a;
+}
+
+/* SIDEBAR & HEADER RE-IMPLEMENTATION */
+.header-fixed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: rgba(12, 27, 34, 0.95);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    padding: 0 1.5rem;
+    z-index: 1030;
+    border-bottom: 1px solid rgba(214, 165, 71, 0.15);
+}
+
+.hamburger-btn {
+    background: none;
+    border: none;
+    color: #f8fafc;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    background: #0c1b22;
+    z-index: 1050;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar.active {
+    left: 0;
+}
+
+.sidebar-header {
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.close-sidebar {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.25rem;
+}
+
+.sidebar-menu {
+    padding: 1rem 0;
+    overflow-y: auto;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1.5rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.sidebar-link:hover,
+.sidebar-link.active {
+    background: rgba(214, 165, 71, 0.15);
+    color: #b8872f;
+}
+
+.sidebar-link i {
+    font-size: 1.2rem;
+}
+
+.sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+    display: none;
+    backdrop-filter: blur(2px);
+}
+
+.sidebar-overlay.active {
+    display: block;
+}
+
+.with-fixed-header {
+    display: block !important;
+    margin-top: 100px !important;
+    padding-top: 0 !important;
+}
+
+.user-profile-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.user-profile-badge:hover {
+    transform: scale(1.05);
+}
+
+.avatar-initials {
+    width: 32px;
+    height: 32px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+/* Dashboard Fixes */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: var(--ink);
+}
+
+.chart-shell {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1.5rem;
+}
+
+.chart-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.chart-note {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+
+.table thead {
+    background: #0c1b22;
+    color: #fff;
+}
+
+.table thead th {
+    padding: 0.85rem 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    border: none;
+}
+
+/* DROPDOWN MENU CUSTOM */
+.dropdown-menu-custom {
+    position: absolute;
+    top: calc(100% + 15px);
+    right: -5px;
+    width: 280px;
+    background: #0c1b22;
+    border: 1px solid rgba(214, 165, 71, 0.2);
+    border-radius: 16px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+    padding: 1.25rem 0;
+    z-index: 1100;
+    display: none;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.dropdown-menu-custom.show {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.dropdown-user-info {
+    padding: 0.5rem 1.5rem 1rem;
+    overflow: hidden;
+}
+
+.info-name {
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.info-role {
+    color: #b8872f;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.info-email {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 0.5rem 0;
+}
+
+.dropdown-item-custom {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.dropdown-item-custom:hover {
+    background: rgba(214, 165, 71, 0.15);
+    color: #b8872f;
+}
+
+.dropdown-item-custom i {
+    font-size: 1.1rem;
+}
+
+
+/* DISABLING HOVER FOR SPECIFIC NAVBAR BUTTON - SOLID ORANGE STATIC */
+.btn-no-hover {
+    background-color: #f97316 !important;
+    /* Orange */
+    color: white !important;
+    border: none !important;
+    font-weight: 600 !important;
+    transition: none !important;
+}
+
+.btn-no-hover:hover,
+.btn-no-hover:active,
+.btn-no-hover:focus {
+    background-color: #f97316 !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: none !important;
+    transform: none !important;
 }

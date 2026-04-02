@@ -1,156 +1,171 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - DAR.COM</title>
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Favicon / Logo -->
+    <link rel="icon" type="image/jpeg" href="~/images/logo1.jpg" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/RealEstateAdmin.styles.css" asp-append-version="true" />
 </head>
 <body class="d-flex flex-column min-vh-100">
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-dark">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
-                    <strong>DAR.COM</strong>
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav me-auto">
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Dashboard" asp-action="Index">
-                                    <i class="bi bi-speedometer2"></i> Dashboard
-                                </a>
-                            </li>
-                            @if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="BienImmobilier" asp-action="Index">
-                                        <i class="bi bi-house-door"></i> Biens immobiliers
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Utilisateur" asp-action="Index">
-                                        <i class="bi bi-people"></i> Utilisateurs
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Message" asp-action="Index">
-                                        <i class="bi bi-envelope"></i> Messages
-                                        @await Component.InvokeAsync("NewMessagesBadge")
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Agenda" asp-action="Index">
-                                        <i class="bi bi-calendar3"></i> Agenda
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="AuditLog" asp-action="Index">
-                                        <i class="bi bi-clock-history"></i> Historique
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Vente" asp-action="Index">
-                                        <i class="bi bi-cash-stack"></i> Ventes
-                                    </a>
-                                </li>
-                            }
-                            else if (User.Identity.IsAuthenticated)
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="BienImmobilier" asp-action="Index">
-                                        <i class="bi bi-house-door"></i> Mes biens immobiliers
-                                    </a>
-                                </li>
-                            }
-                        }
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Shop" asp-action="Index">
-                                <i class="bi bi-shop"></i> Shop
-                            </a>
-                        </li>
-                        @if (!User.IsInRole("Admin") && !User.IsInRole("SuperAdmin"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Message" asp-action="Create">
-                                    <i class="bi bi-chat-dots"></i> Contact
-                                </a>
-                            </li>
-                        }
-                    </ul>
-                    <ul class="navbar-nav">
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-person-circle profile-nav-icon"></i>
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                    <li>
-                                        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                                            <button type="submit" class="dropdown-item">
-                                                <i class="bi bi-box-arrow-right"></i> Déconnexion
-                                            </button>
-                                        </form>
-                                    </li>
-                                </ul>
-                            </li>
-                        }
-                        else
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link btn btn-outline-light ms-2" asp-controller="Account" asp-action="Login">
-                                    Connexion
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link btn btn-light ms-2" asp-controller="Account" asp-action="Register">
-                                    Inscription
-                                </a>
-                            </li>
-                        }
-                    </ul>
+    <!-- HEADER FIXE -->
+    <header class="header-fixed">
+        <button class="hamburger-btn me-3" id="toggleSidebar">
+            <i class="bi bi-list"></i>
+        </button>
+        
+        <a class="navbar-brand me-auto d-flex align-items-center gap-2" style="color: #fdf7ec !important; font-size: 1.4rem;" asp-controller="Home" asp-action="Index">
+            <img src="~/images/logo1.jpg" alt="Logo DAR.COM" style="height: 40px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" />
+            <strong>DAR.COM</strong>
+        </a>
+
+        <div class="user-profile-container position-relative">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <div class="user-profile-badge" id="userDropdownToggle" role="button">
+                    <div class="avatar-initials">@User.Identity.Name?[0].ToString().ToUpper()</div>
                 </div>
-            </div>
-        </nav>
+
+                <div class="dropdown-menu-custom" id="userDropdownMenu">
+                    <div class="dropdown-user-info">
+                        <div class="info-name">@User.Identity.Name</div>
+                        <div class="info-role">@(User.IsInRole("SuperAdmin") ? "SuperAdmin" : User.IsInRole("Admin") ? "Admin" : "Agent")</div>
+                        <div class="info-email">@User.Identity.Name</div>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item-custom" asp-controller="Profile" asp-action="Index">
+                        <i class="bi bi-person-circle"></i> Mon profil
+                    </a>
+                    <a class="dropdown-item-custom" asp-controller="Account" asp-action="Login">
+                        <i class="bi bi-arrow-left-right"></i> Changer de compte
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <form asp-controller="Account" asp-action="Logout" method="post">
+                        <button type="submit" class="dropdown-item-custom text-danger border-0 bg-transparent w-100 text-start">
+                            <i class="bi bi-box-arrow-right"></i> Déconnexion
+                        </button>
+                    </form>
+                </div>
+            }
+            else
+            {
+                <a class="btn btn-sm btn-outline-primary rounded-pill px-3 btn-no-hover" asp-controller="Account" asp-action="Login">Connexion</a>
+            }
+        </div>
     </header>
-    <main role="main" class="flex-grow-1 pb-5 mb-4">
+
+    <!-- SIDEBAR OVERLAY -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- SIDEBAR COULISSANTE -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h4 class="mb-0 text-white fw-bold">Menu</h4>
+            <button class="close-sidebar" id="closeSidebar"><i class="bi bi-x-lg"></i></button>
+        </div>
+        
+        <div class="sidebar-menu">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")" asp-controller="Dashboard" asp-action="Index">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+
+                @if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
+                {
+                    <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "BienImmobilier" ? "active" : "")" asp-controller="BienImmobilier" asp-action="Index">
+                        <i class="bi bi-house-door"></i> Biens immobiliers
+                    </a>
+                    <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Utilisateur" ? "active" : "")" asp-controller="Utilisateur" asp-action="Index">
+                        <i class="bi bi-people"></i> Utilisateurs
+                    </a>
+                    <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Vente" ? "active" : "")" asp-controller="Vente" asp-action="Index">
+                        <i class="bi bi-cash-stack"></i> Ventes & Revenus
+                    </a>
+                    <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AgentPerformance" ? "active" : "")" asp-controller="AgentPerformance" asp-action="Index">
+                        <i class="bi bi-graph-up-arrow"></i> Performance Agents
+                    </a>
+                    <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Message" ? "active" : "")" asp-controller="Message" asp-action="Index">
+                        <i class="bi bi-envelope"></i> Messages
+                        @await Component.InvokeAsync("NewMessagesBadge")
+                    </a>
+                    <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Agenda" ? "active" : "")" asp-controller="Agenda" asp-action="Index">
+                        <i class="bi bi-calendar3"></i> Agenda
+                    </a>
+                    <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AuditLog" ? "active" : "")" asp-controller="AuditLog" asp-action="Index">
+                        <i class="bi bi-clock-history"></i> Historique d'audit
+                    </a>
+                }
+                else
+                {
+                    <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "BienImmobilier" ? "active" : "")" asp-controller="BienImmobilier" asp-action="Index">
+                        <i class="bi bi-house-door"></i> Mes annonces
+                    </a>
+                }
+            }
+            
+            <div class="px-4 py-3"><hr class="bg-white opacity-25" /></div>
+
+            <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Shop" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")" asp-controller="Shop" asp-action="Index">
+                <i class="bi bi-shop"></i> Notre Shop
+            </a>
+            <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Shop" && ViewContext.RouteData.Values["action"]?.ToString() == "Solde" ? "active" : "")" asp-controller="Shop" asp-action="Solde">
+                <i class="bi bi-tag"></i> En Solde
+            </a>
+            <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "Privacy" ? "active" : "")" asp-controller="Home" asp-action="Privacy">
+                <i class="bi bi-shield-lock"></i> Confidentialité
+            </a>
+        </div>
+
+        <div class="mt-auto p-4 border-top border-white border-opacity-10 text-center small text-white-50">
+            &copy; @DateTime.Now.Year DAR.COM
+        </div>
+    </aside>
+
+    <main role="main" class="flex-grow-1 with-fixed-header pb-5 mb-4">
         @RenderBody()
     </main>
 
-    <footer class="footer mt-5">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <p class="mb-0 small">&copy; @DateTime.Now.Year DAR.COM - Tous droits réservés</p>
-                </div>
-                <div class="col-md-6 text-end">
-                    <a asp-area="" asp-controller="Home" asp-action="Privacy" class="text-white text-decoration-none small">Confidentialité</a>
-                </div>
-            </div>
-        </div>
-    </footer>
     <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js" integrity="sha256-2Pmvv0kuTBOenSvLm6bvfBSSHrUJ+3A7x6P5Ebd07/g=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <!-- Bootstrap 5 JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        $(document).ready(function() {
+            const sidebar = $('#sidebar');
+            const overlay = $('#sidebarOverlay');
+
+            const openSidebar = () => {
+                sidebar.addClass('active');
+                overlay.addClass('active');
+                $('body').css('overflow', 'hidden');
+            };
+
+            const closeSidebar = () => {
+                sidebar.removeClass('active');
+                overlay.removeClass('active');
+                $('body').css('overflow', 'auto');
+            };
+
+            $('#toggleSidebar').on('click', openSidebar);
+            $('#closeSidebar, #sidebarOverlay').on('click', closeSidebar);
+        });
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

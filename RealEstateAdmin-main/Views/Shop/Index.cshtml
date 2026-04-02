@@ -110,6 +110,13 @@
                 var canReserveVisit = canInteract && item.StatutCommercial == "Disponible";
                 var canMeeting = canInteract && item.StatutCommercial != "Vendu";
                 var canInterest = canInteract && item.StatutCommercial != "Vendu";
+                var imageUrl = !string.IsNullOrWhiteSpace(item.ImageUrl)
+                    ? item.ImageUrl
+                    : item.Images.FirstOrDefault()?.Url;
+                var hasDiscount = item.DiscountPercent > 0;
+                var discountedPrice = hasDiscount
+                    ? item.Prix * (100 - item.DiscountPercent) / 100m
+                    : item.Prix;
                 var slots = Model.AvailableVisitSlotsByBien.TryGetValue(item.Id, out var slotList)
                     ? slotList
                     : Array.Empty<DateTime>();
@@ -123,15 +130,19 @@
                         <div class="col-lg-3 col-md-4">
                             <a asp-controller="BienImmobilier" asp-action="Details" asp-route-id="@item.Id" class="text-decoration-none">
                                 <div class="shop-row-media">
-                                    @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                                    @if (!string.IsNullOrWhiteSpace(imageUrl))
                                     {
-                                        <img src="@item.ImageUrl" alt="@item.Titre" class="shop-row-image" />
+                                        <img src="@imageUrl" alt="@item.Titre" class="shop-row-image" />
                                     }
                                     else
                                     {
                                         <div class="shop-row-placeholder">
                                             <i class="bi bi-image"></i>
                                         </div>
+                                    }
+                                    @if (hasDiscount)
+                                    {
+                                        <span class="badge bg-danger position-absolute top-0 end-0 m-3">-@item.DiscountPercent%</span>
                                     }
                                 </div>
                             </a>
@@ -145,8 +156,18 @@
                                         <span class="badge rounded-pill @(item.StatutCommercial == "Vendu" ? "bg-secondary" : item.StatutCommercial == "Réservé" ? "bg-warning text-dark" : "bg-success")">
                                             @item.StatutCommercial
                                         </span>
+                                        @if (hasDiscount)
+                                        {
+                                            <span class="badge rounded-pill bg-danger-subtle text-danger">En solde</span>
+                                        }
                                     </div>
-                                    <div class="shop-price">@item.Prix.ToString("N2") DT</div>
+                                    <div class="text-end">
+                                        @if (hasDiscount)
+                                        {
+                                            <div class="small text-muted text-decoration-line-through">@item.Prix.ToString("N2") DT</div>
+                                        }
+                                        <div class="shop-price @(hasDiscount ? "text-danger" : string.Empty)">@discountedPrice.ToString("N2") DT</div>
+                                    </div>
                                 </div>
 
                                 <h5 class="shop-title mb-2" title="@item.Titre">@item.Titre</h5>
@@ -158,6 +179,13 @@
                                     <span><i class="bi bi-aspect-ratio"></i> @(item.Surface ?? 0) m²</span>
                                     <span><i class="bi bi-door-closed"></i> @(item.NombrePieces ?? 0) pièces</span>
                                 </div>
+
+                                @if (hasDiscount)
+                                {
+                                    <div class="shop-meta mb-2 text-danger">
+                                        <span><i class="bi bi-tags"></i> Promotion active de @item.DiscountPercent%</span>
+                                    </div>
+                                }
 
                                 <div class="shop-agent">
                                     <div class="shop-agent-owner">

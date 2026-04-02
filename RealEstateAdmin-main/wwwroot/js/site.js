@@ -32,3 +32,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     targets.forEach((el) => observer.observe(el));
 });
+
+// Profile Dropdown Toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('userDropdownToggle');
+    const menu = document.getElementById('userDropdownMenu');
+
+    if (toggle && menu) {
+        toggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            menu.classList.toggle('show');
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!menu.contains(e.target) && !toggle.contains(e.target)) {
+                menu.classList.remove('show');
+            }
+        });
+    }
+});

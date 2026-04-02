@@ -5,6 +5,7 @@ namespace RealEstateAdmin.Models
     public class ApplicationUser : IdentityUser
     {
         public string? Nom { get; set; }
+        public DateTime DateInscription { get; set; } = DateTime.Now;
     }
 }
 

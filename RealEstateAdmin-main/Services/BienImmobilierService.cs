@@ -182,6 +182,12 @@ namespace RealEstateAdmin.Services
                 return ServiceResult.Fail(ServiceErrorCode.Forbidden, "Accès refusé.");
             }
 
+            var ownerAssignmentResult = await EnsureOwnerAssignedAsync(existingBien, currentUserId);
+            if (!ownerAssignmentResult.Success)
+            {
+                return ownerAssignmentResult;
+            }
+
             try
             {
                 bienImmobilier.UserId = existingBien.UserId;
@@ -269,6 +275,12 @@ namespace RealEstateAdmin.Services
                 return ServiceResult.Fail(ServiceErrorCode.Forbidden, "Accès refusé.");
             }
 
+            var ownerAssignmentResult = await EnsureOwnerAssignedAsync(bienImmobilier, currentUserId);
+            if (!ownerAssignmentResult.Success)
+            {
+                return ownerAssignmentResult;
+            }
+
             bienImmobilier.TypeTransaction = "A Vendre";
             bienImmobilier.StatutCommercial = "Disponible";
             _context.Update(bienImmobilier);
@@ -283,6 +295,12 @@ namespace RealEstateAdmin.Services
             if (bienImmobilier == null)
             {
                 return ServiceResult.Fail(ServiceErrorCode.NotFound, "Bien introuvable.");
+            }
+
+            var ownerAssignmentResult = await EnsureOwnerAssignedAsync(bienImmobilier, actorUserId);
+            if (!ownerAssignmentResult.Success)
+            {
+                return ownerAssignmentResult;
             }
 
             bienImmobilier.IsPublished = !bienImmobilier.IsPublished;
@@ -309,6 +327,12 @@ namespace RealEstateAdmin.Services
                 return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Statut de publication invalide.");
             }
 
+            var ownerAssignmentResult = await EnsureOwnerAssignedAsync(bienImmobilier, actorUserId);
+            if (!ownerAssignmentResult.Success)
+            {
+                return ownerAssignmentResult;
+            }
+
             bienImmobilier.PublicationStatus = status;
             bienImmobilier.IsPublished = status == "Publié";
             await ApplyValidatorOnPublicationDecisionAsync(bienImmobilier, actorUserId);
@@ -331,6 +355,12 @@ namespace RealEstateAdmin.Services
                 return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Statut commercial invalide.");
             }
 
+            var ownerAssignmentResult = await EnsureOwnerAssignedAsync(bienImmobilier, actorUserId);
+            if (!ownerAssignmentResult.Success)
+            {
+                return ownerAssignmentResult;
+            }
+
             bienImmobilier.StatutCommercial = commercialStatus;
             if (commercialStatus == "Vendu")
             {
@@ -345,6 +375,42 @@ namespace RealEstateAdmin.Services
             await _context.SaveChangesAsync();
             await _auditLogService.LogAsync(actorUserId, "Status", "BienImmobilier", bienImmobilier.Id, $"Statut commercial: {commercialStatus} - '{bienImmobilier.Titre}'");
             return ServiceResult.Ok();
+        }
+
+        private async Task<ServiceResult> EnsureOwnerAssignedAsync(BienImmobilier bienImmobilier, string? fallbackOwnerUserId)
+        {
+            if (!string.IsNullOrWhiteSpace(bienImmobilier.UserId))
+            {
+                var ownerExists = await _userManager.Users.AnyAsync(u => u.Id == bienImmobilier.UserId);
+                if (ownerExists)
+                {
+                    return ServiceResult.Ok();
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(bienImmobilier.PublicationValidatedByAdminId))
+            {
+                var validatorExists = await _userManager.Users.AnyAsync(u => u.Id == bienImmobilier.PublicationValidatedByAdminId);
+                if (validatorExists)
+                {
+                    bienImmobilier.UserId = bienImmobilier.PublicationValidatedByAdminId;
+                    return ServiceResult.Ok();
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(fallbackOwnerUserId))
+            {
+                var fallbackExists = await _userManager.Users.AnyAsync(u => u.Id == fallbackOwnerUserId);
+                if (fallbackExists)
+                {
+                    bienImmobilier.UserId = fallbackOwnerUserId;
+                    return ServiceResult.Ok();
+                }
+            }
+
+            return ServiceResult.Fail(
+                ServiceErrorCode.Validation,
+                "Ce bien doit avoir un vendeur (propriétaire) valide avant enregistrement.");
         }
 
         private async Task ApplyValidatorOnPublicationDecisionAsync(BienImmobilier bienImmobilier, string? actorUserId)

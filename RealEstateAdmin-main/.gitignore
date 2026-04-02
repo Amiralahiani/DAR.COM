@@ -2,5 +2,4 @@
 bin/
 obj/
 
-# Configuration locale de dev
-appsettings.Development.json
+

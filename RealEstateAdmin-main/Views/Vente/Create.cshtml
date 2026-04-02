@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Saisie manuelle d'une transaction";
+    var sellerDisplay = Model.Users.FirstOrDefault(u => u.Value == Model.Input.SellerId)?.Label ?? string.Empty;
+    var agentDisplay = Model.Users.FirstOrDefault(u => u.Value == Model.Input.AgentId)?.Label ?? string.Empty;
 }
 
 <div class="container">
@@ -16,14 +18,14 @@
 
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <form asp-action="Create" method="post">
+            <form asp-action="Create" method="post" id="createSaleForm">
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
                 <div class="row g-3">
-                    <div class="col-md-6">
-                        <label asp-for="Input.BienImmobilierId" class="form-label"></label>
-                        <select asp-for="Input.BienImmobilierId" class="form-select">
-                            <option value="0">Sélectionner un bien</option>
+                    <div class="col-md-12">
+                        <label asp-for="Input.BienImmobilierId" class="form-label">Sélectionner le Bien Immobilier</label>
+                        <select asp-for="Input.BienImmobilierId" class="form-select" id="bienSelect">
+                            <option value="0">--- Choisir un bien ---</option>
                             @foreach (var bien in Model.Biens)
                             {
                                 <option value="@bien.Value">@bien.Label</option>
@@ -33,15 +35,26 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label asp-for="Input.Amount" class="form-label"></label>
-                        <input asp-for="Input.Amount" type="number" step="0.01" min="0.01" class="form-control" />
+                        <label asp-for="Input.Amount" class="form-label">Prix de vente final (DT)</label>
+                        <input asp-for="Input.Amount" type="number" step="0.01" min="0.01" class="form-control" id="prixInput" />
                         <span asp-validation-for="Input.Amount" class="text-danger"></span>
+                        <div class="form-text text-muted" id="prixInitialLabel">Prix affiché : -</div>
                     </div>
 
                     <div class="col-md-6">
-                        <label asp-for="Input.BuyerId" class="form-label"></label>
-                        <select asp-for="Input.BuyerId" class="form-select">
-                            <option value="">Non assigné</option>
+                        <label class="form-label">Surface (m²)</label>
+                        <input type="text" id="surfaceInput" class="form-control bg-light" readonly />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Adresse du bien</label>
+                        <input type="text" id="adresseInput" class="form-control bg-light" readonly />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Input.BuyerId" class="form-label">Acheteur (Client)</label>
+                        <select asp-for="Input.BuyerId" class="form-select" required>
+                            <option value="">-- Sélectionner l'acheteur --</option>
                             @foreach (var user in Model.Users)
                             {
                                 <option value="@user.Value">@user.Label</option>
@@ -51,62 +64,46 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label asp-for="Input.SellerId" class="form-label"></label>
-                        <select asp-for="Input.SellerId" class="form-select">
-                            <option value="">Non assigné</option>
-                            @foreach (var user in Model.Users)
-                            {
-                                <option value="@user.Value">@user.Label</option>
-                            }
-                        </select>
+                        <label class="form-label">Vendeur (Propriétaire)</label>
+                        <input asp-for="Input.SellerId" type="hidden" id="sellerIdInput" />
+                        <input type="text" class="form-control bg-light" id="sellerDisplay" value="@sellerDisplay" readonly placeholder="Auto-rempli selon le bien sélectionné" />
                         <span asp-validation-for="Input.SellerId" class="text-danger"></span>
                     </div>
 
-                    <div class="col-md-4">
-                        <label asp-for="Input.PaymentMethod" class="form-label"></label>
-                        <select asp-for="Input.PaymentMethod" class="form-select">
-                            @foreach (var method in Model.PaymentMethods)
-                            {
-                                <option value="@method">@method</option>
-                            }
-                        </select>
-                        <span asp-validation-for="Input.PaymentMethod" class="text-danger"></span>
+                    <div class="col-md-6">
+                        <label class="form-label">Agent responsable</label>
+                        <input asp-for="Input.AgentId" type="hidden" id="agentIdInput" />
+                        <input type="text" class="form-control bg-light" id="agentDisplay" value="@agentDisplay" readonly placeholder="Auto-rempli selon le bien sélectionné" />
+                        <span asp-validation-for="Input.AgentId" class="text-danger"></span>
                     </div>
 
-                    <div class="col-md-4">
-                        <label asp-for="Input.PaymentStatus" class="form-label"></label>
-                        <select asp-for="Input.PaymentStatus" class="form-select">
-                            @foreach (var status in Model.PaymentStatuses)
-                            {
-                                <option value="@status">@status</option>
-                            }
-                        </select>
-                        <span asp-validation-for="Input.PaymentStatus" class="text-danger"></span>
-                    </div>
+                    <input asp-for="Input.PaymentMethod" type="hidden" />
+                    <input asp-for="Input.PaymentStatus" type="hidden" />
+                    <input asp-for="Input.TransactionStatus" type="hidden" />
 
-                    <div class="col-md-4">
-                        <label asp-for="Input.TransactionStatus" class="form-label"></label>
-                        <select asp-for="Input.TransactionStatus" class="form-select">
-                            @foreach (var status in Model.TransactionStatuses)
-                            {
-                                <option value="@status">@status</option>
-                            }
-                        </select>
-                        <span asp-validation-for="Input.TransactionStatus" class="text-danger"></span>
+                    <div class="col-12">
+                        <label asp-for="Input.ConditionsPaiement" class="form-label">Conditions du contrat (obligatoire)</label>
+                        <textarea asp-for="Input.ConditionsPaiement" rows="4" class="form-control" placeholder="Ex: acompte 20%, solde sous 30 jours, signature notaire le ..."></textarea>
+                        <span asp-validation-for="Input.ConditionsPaiement" class="text-danger"></span>
                     </div>
 
                     <div class="col-12">
-                        <label asp-for="Input.Notes" class="form-label"></label>
-                        <textarea asp-for="Input.Notes" rows="4" class="form-control"></textarea>
+                        <label asp-for="Input.Notes" class="form-label">Notes internes (optionnel)</label>
+                        <textarea asp-for="Input.Notes" rows="3" class="form-control" placeholder="Détails du contrat, échéances..."></textarea>
                         <span asp-validation-for="Input.Notes" class="text-danger"></span>
                     </div>
                 </div>
 
+                <div class="alert alert-info mt-4">
+                    <i class="bi bi-info-circle"></i> 
+                    Le contrat est généré <strong>automatiquement</strong> juste après la saisie. Le paiement est géré uniquement dans la section des versements.
+                </div>
+
                 <div class="d-flex gap-2 mt-4">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle"></i> Enregistrer la transaction
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-check-circle"></i> Valider et générer le contrat
                     </button>
-                    <a asp-action="Index" class="btn btn-outline-secondary">Annuler</a>
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-lg">Annuler</a>
                 </div>
             </form>
         </div>
@@ -117,4 +114,55 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+        $(document).ready(function() {
+            function resetAutoFilledFields() {
+                $('#sellerIdInput').val('');
+                $('#agentIdInput').val('');
+                $('#sellerDisplay').val('');
+                $('#agentDisplay').val('');
+                $('#autoFillWarning').addClass('d-none');
+            }
+
+            function loadBienDetails(bienId) {
+                $.get('/Vente/GetBienDetails/' + bienId, function(data) {
+                    $('#prixInput').val(data.prix);
+                    $('#prixInitialLabel').text('Prix affiché : ' + data.prix.toLocaleString() + ' DT');
+                    $('#surfaceInput').val((data.surface ?? '-') + ' m²');
+                    $('#adresseInput').val(data.adresse ?? '');
+
+                    $('#sellerIdInput').val(data.vendeurId ?? '');
+                    $('#agentIdInput').val(data.agentId ?? '');
+                    $('#sellerDisplay').val(data.vendeurNom ?? '');
+                    $('#agentDisplay').val(data.agentNom ?? '');
+
+                    if (!data.vendeurId || !data.agentId) {
+                        $('#autoFillWarning').removeClass('d-none');
+                    } else {
+                        $('#autoFillWarning').addClass('d-none');
+                    }
+                }).fail(function() {
+                    resetAutoFilledFields();
+                });
+            }
+
+            $('#bienSelect').change(function() {
+                var bienId = $(this).val();
+                if (bienId && bienId != "0") {
+                    loadBienDetails(bienId);
+                } else {
+                    $('#prixInput').val('');
+                    $('#prixInitialLabel').text('Prix affiché : -');
+                    $('#surfaceInput').val('');
+                    $('#adresseInput').val('');
+                    resetAutoFilledFields();
+                }
+            });
+
+            var initialBienId = $('#bienSelect').val();
+            if (initialBienId && initialBienId !== "0") {
+                loadBienDetails(initialBienId);
+            }
+        });
+    </script>
 }

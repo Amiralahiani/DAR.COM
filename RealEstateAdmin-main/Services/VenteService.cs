@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using RealEstateAdmin.Data;
 using RealEstateAdmin.Models;
 
@@ -7,7 +8,7 @@ namespace RealEstateAdmin.Services
 {
     public class VenteService : IVenteService
     {
-        private static readonly string[] PaymentMethods = { "Virement", "Chèque", "Crédit", "Espèces" };
+        private static readonly string[] DefaultPaymentMethods = { "Virement", "Chèque", "Crédit", "Espèces" };
         private static readonly string[] PaymentStatuses = { "En attente", "Payé", "Refusé" };
         private static readonly string[] TransactionStatuses = { "En cours", "Finalisée", "Annulée" };
 
@@ -15,17 +16,45 @@ namespace RealEstateAdmin.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly PdfExportService _pdfExportService;
         private readonly IAuditLogService _auditLogService;
+        private readonly IAgentPerformanceService _agentPerformanceService;
+        private readonly ILogger<VenteService> _logger;
 
         public VenteService(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             PdfExportService pdfExportService,
-            IAuditLogService auditLogService)
+            IAuditLogService auditLogService,
+            IAgentPerformanceService agentPerformanceService,
+            ILogger<VenteService> logger)
         {
             _context = context;
             _userManager = userManager;
             _pdfExportService = pdfExportService;
             _auditLogService = auditLogService;
+            _agentPerformanceService = agentPerformanceService;
+            _logger = logger;
+        }
+
+        // Payment methods are now configurable via the database settings table if present.
+        // Fallback to default list defined above.
+        private async Task<string[]> GetPaymentMethodsAsync()
+        {
+            try
+            {
+                // If there's a simple Settings table, try to read a semicolon separated value
+                // Try reading from AppSettings table if present
+                var setting = await _context.AppSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Key == "PaymentMethods");
+                if (setting != null && !string.IsNullOrWhiteSpace(setting.Value))
+                {
+                    return setting.Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                }
+            }
+            catch
+            {
+                // ignore and fallback
+            }
+
+            return DefaultPaymentMethods;
         }
 
         public async Task<SalesIndexData> GetIndexDataAsync(SalesFilter filter)
@@ -36,7 +65,9 @@ namespace RealEstateAdmin.Services
                 .Include(s => s.Seller)
                 .AsQueryable();
 
-            if (!string.IsNullOrWhiteSpace(filter.PaymentMethod) && PaymentMethods.Contains(filter.PaymentMethod))
+            var paymentMethods = await GetPaymentMethodsAsync();
+
+            if (!string.IsNullOrWhiteSpace(filter.PaymentMethod) && paymentMethods.Contains(filter.PaymentMethod))
             {
                 query = query.Where(s => s.PaymentMethod == filter.PaymentMethod);
             }
@@ -52,7 +83,7 @@ namespace RealEstateAdmin.Services
             {
                 Sales = sales,
                 Filter = filter,
-                PaymentMethods = PaymentMethods,
+                PaymentMethods = paymentMethods,
                 PaymentStatuses = PaymentStatuses,
                 TotalSales = sales.Count,
                 TotalAmount = sales.Sum(s => s.Amount).ToString("N2"),
@@ -86,12 +117,14 @@ namespace RealEstateAdmin.Services
                 })
                 .ToList();
 
+            var paymentMethods = await GetPaymentMethodsAsync();
+
             return new SalesCreateData
             {
                 Input = input ?? new SalesCreateInput(),
                 Biens = biens,
                 Users = users,
-                PaymentMethods = PaymentMethods,
+                PaymentMethods = paymentMethods,
                 PaymentStatuses = PaymentStatuses,
                 TransactionStatuses = TransactionStatuses
             };
@@ -104,20 +137,17 @@ namespace RealEstateAdmin.Services
                 return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "Le montant doit être supérieur à 0.");
             }
 
-            if (!PaymentMethods.Contains(input.PaymentMethod) || !PaymentStatuses.Contains(input.PaymentStatus))
+            var paymentMethods = await GetPaymentMethodsAsync();
+            var initialPaymentMethod = paymentMethods.FirstOrDefault() ?? "Virement";
+
+            if (string.IsNullOrWhiteSpace(input.BuyerId))
             {
-                return ServiceResult<int>.Fail(ServiceErrorCode.BadRequest, "Mode ou statut de paiement invalide.");
+                return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "L'acheteur est obligatoire.");
             }
 
-            if (!TransactionStatuses.Contains(input.TransactionStatus))
+            if (string.IsNullOrWhiteSpace(input.ConditionsPaiement))
             {
-                return ServiceResult<int>.Fail(ServiceErrorCode.BadRequest, "Statut de transaction invalide.");
-            }
-
-            if (!string.IsNullOrWhiteSpace(input.BuyerId) && !string.IsNullOrWhiteSpace(input.SellerId)
-                && string.Equals(input.BuyerId, input.SellerId, StringComparison.OrdinalIgnoreCase))
-            {
-                return ServiceResult<int>.Fail(ServiceErrorCode.BadRequest, "Acheteur et vendeur doivent être différents.");
+                return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "Les conditions du contrat sont obligatoires.");
             }
 
             var bien = await _context.Biens.FirstOrDefaultAsync(b => b.Id == input.BienImmobilierId);
@@ -126,41 +156,122 @@ namespace RealEstateAdmin.Services
                 return ServiceResult<int>.Fail(ServiceErrorCode.NotFound, "Bien introuvable.");
             }
 
-            if (!string.IsNullOrWhiteSpace(input.BuyerId))
+            if (string.Equals(bien.StatutCommercial, "Vendu", StringComparison.OrdinalIgnoreCase))
             {
-                var buyerExists = await _userManager.Users.AnyAsync(u => u.Id == input.BuyerId);
-                if (!buyerExists)
-                {
-                    return ServiceResult<int>.Fail(ServiceErrorCode.BadRequest, "Acheteur invalide.");
-                }
+                return ServiceResult<int>.Fail(ServiceErrorCode.Conflict, "Ce bien est déjà vendu.");
             }
 
-            if (!string.IsNullOrWhiteSpace(input.SellerId))
+            if (string.Equals(bien.StatutCommercial, "En cours de vente", StringComparison.OrdinalIgnoreCase))
             {
-                var sellerExists = await _userManager.Users.AnyAsync(u => u.Id == input.SellerId);
-                if (!sellerExists)
+                return ServiceResult<int>.Fail(ServiceErrorCode.Conflict, "Ce bien est déjà en cours de vente.");
+            }
+
+            var hasActiveSale = await _context.Sales.AnyAsync(s =>
+                s.BienImmobilierId == input.BienImmobilierId
+                && s.TransactionStatus != "Annulée");
+            if (hasActiveSale)
+            {
+                return ServiceResult<int>.Fail(ServiceErrorCode.Conflict, "Une transaction active existe déjà pour ce bien.");
+            }
+
+            var buyer = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == input.BuyerId);
+            if (buyer == null)
+            {
+                return ServiceResult<int>.Fail(ServiceErrorCode.BadRequest, "Acheteur invalide.");
+            }
+
+            ApplicationUser? expectedSeller = null;
+            if (!string.IsNullOrWhiteSpace(bien.UserId))
+            {
+                expectedSeller = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == bien.UserId);
+            }
+
+            if (expectedSeller == null)
+            {
+                if (string.IsNullOrWhiteSpace(actorUserId))
                 {
-                    return ServiceResult<int>.Fail(ServiceErrorCode.BadRequest, "Vendeur invalide.");
+                    return ServiceResult<int>.Fail(
+                        ServiceErrorCode.Validation,
+                        "Ce bien n'a pas de vendeur valide et aucun agent courant n'est disponible pour l'affectation automatique.");
                 }
+
+                var actorAsSeller = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == actorUserId);
+                if (actorAsSeller == null)
+                {
+                    return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "L'agent courant est introuvable pour affecter le vendeur du bien.");
+                }
+
+                bien.UserId = actorAsSeller.Id;
+                expectedSeller = actorAsSeller;
+                _context.Update(bien);
+            }
+
+            var expectedAgentId = await ResolveAgentForBienAsync(bien, actorUserId);
+            if (string.IsNullOrWhiteSpace(expectedAgentId))
+            {
+                return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "Aucun agent responsable n'a pu être déterminé pour ce bien.");
+            }
+
+            var expectedAgent = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == expectedAgentId);
+            if (expectedAgent == null)
+            {
+                return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "L'agent responsable est introuvable.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(input.SellerId)
+                && !string.Equals(input.SellerId, expectedSeller.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                return ServiceResult<int>.Fail(ServiceErrorCode.BadRequest, "Le vendeur saisi ne correspond pas au propriétaire du bien sélectionné.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(input.AgentId)
+                && !string.Equals(input.AgentId, expectedAgent.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                return ServiceResult<int>.Fail(ServiceErrorCode.BadRequest, "L'agent saisi ne correspond pas à l'agent responsable du bien.");
+            }
+
+            if (string.Equals(input.BuyerId, expectedSeller.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                return ServiceResult<int>.Fail(ServiceErrorCode.BadRequest, "Acheteur et vendeur doivent être différents.");
             }
 
             var now = DateTime.Now;
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
             var sale = new SaleTransaction
             {
                 BienImmobilierId = input.BienImmobilierId,
-                BuyerId = string.IsNullOrWhiteSpace(input.BuyerId) ? null : input.BuyerId,
-                SellerId = string.IsNullOrWhiteSpace(input.SellerId) ? null : input.SellerId,
+                BuyerId = input.BuyerId,
+                SellerId = expectedSeller.Id,
+                AgentId = expectedAgent.Id,
                 Amount = input.Amount,
-                PaymentMethod = input.PaymentMethod,
-                PaymentStatus = input.PaymentStatus,
-                TransactionStatus = input.TransactionStatus,
+                PaymentMethod = initialPaymentMethod,
+                PaymentStatus = "En attente",
+                TransactionStatus = "En cours",
                 CreatedAt = now,
-                PaidAt = input.PaymentStatus == "Payé" ? now : null,
+                PaidAt = null,
                 Notes = string.IsNullOrWhiteSpace(input.Notes) ? null : input.Notes.Trim()
             };
 
+            // Démarrage du process de vente: retirer immédiatement le bien du shop.
+            bien.StatutCommercial = "En cours de vente";
+            bien.IsPublished = false;
+            bien.PublicationStatus = "Refusé";
+            _context.Update(bien);
+
             _context.Sales.Add(sale);
             await _context.SaveChangesAsync();
+
+            var contractResult = await CreateContratAsync(sale.Id, input.ConditionsPaiement, actorUserId);
+            if (!contractResult.Success)
+            {
+                await transaction.RollbackAsync();
+                return ServiceResult<int>.Fail(
+                    contractResult.ErrorCode,
+                    contractResult.Message ?? "Échec de génération automatique du contrat.");
+            }
+
+            await transaction.CommitAsync();
 
             await _auditLogService.LogAsync(
                 actorUserId,
@@ -169,7 +280,11 @@ namespace RealEstateAdmin.Services
                 sale.Id,
                 $"Saisie manuelle transaction pour '{bien.Titre}' ({sale.Amount:N2} DT).");
 
-            return ServiceResult<int>.Ok(sale.Id, "Transaction créée avec succès.");
+            await TryRecomputePerformanceAsync();
+
+            return ServiceResult<int>.Ok(
+                sale.Id,
+                $"Transaction enregistrée et contrat généré automatiquement. {contractResult.Message}");
         }
 
         public async Task<ServiceResult> UpdatePaymentAsync(int id, string paymentMethod, string paymentStatus, string? actorUserId)
@@ -180,7 +295,9 @@ namespace RealEstateAdmin.Services
                 return ServiceResult.Fail(ServiceErrorCode.NotFound, "Transaction introuvable.");
             }
 
-            if (!PaymentMethods.Contains(paymentMethod) || !PaymentStatuses.Contains(paymentStatus))
+            var paymentMethods = await GetPaymentMethodsAsync();
+
+            if (!paymentMethods.Contains(paymentMethod) || !PaymentStatuses.Contains(paymentStatus))
             {
                 return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Modalité ou statut de paiement invalide.");
             }
@@ -188,7 +305,36 @@ namespace RealEstateAdmin.Services
             sale.PaymentMethod = paymentMethod;
             sale.PaymentStatus = paymentStatus;
             sale.PaidAt = paymentStatus == "Payé" ? DateTime.Now : null;
-            _context.Update(sale);
+
+            // If payment completed and we have a buyer, transfer ownership of the property
+            // so it appears in the buyer's "Mes biens" and is removed from the seller.
+            if (sale.PaymentStatus == "Payé" && !string.IsNullOrWhiteSpace(sale.BuyerId) && sale.BienImmobilier != null)
+            {
+                try
+                {
+                    // Change owner to buyer
+                    sale.BienImmobilier.UserId = sale.BuyerId;
+                    // Mark commercial status and type appropriately
+                    sale.BienImmobilier.StatutCommercial = "Vendu";
+                    sale.BienImmobilier.TypeTransaction = "Acheté";
+                    // Optionally unpublish after sale
+                    sale.BienImmobilier.IsPublished = false;
+                    sale.BienImmobilier.PublicationStatus = "Refusé";
+                    // Update both sale and bien in same transaction
+                    _context.Update(sale);
+                    _context.Update(sale.BienImmobilier);
+                }
+                catch
+                {
+                    // ignore transfer errors, still persist payment status
+                    _context.Update(sale);
+                }
+            }
+            else
+            {
+                _context.Update(sale);
+            }
+
             await _context.SaveChangesAsync();
 
             await _auditLogService.LogAsync(
@@ -197,6 +343,8 @@ namespace RealEstateAdmin.Services
                 "SaleTransaction",
                 sale.Id,
                 $"Paiement mis à jour pour '{sale.BienImmobilier?.Titre}': {paymentMethod} / {paymentStatus}");
+
+            await TryRecomputePerformanceAsync();
 
             return ServiceResult.Ok("Paiement mis à jour avec succès.");
         }
@@ -250,6 +398,338 @@ namespace RealEstateAdmin.Services
             }
 
             return user.Id;
+        }
+
+        // ─── Nouvelles méthodes ───────────────────────────────────────────────────
+
+        public async Task<BienDetailsDto?> GetBienDetailsAsync(int bienId, string? fallbackAgentUserId = null)
+        {
+            var bien = await _context.Biens
+                .Include(b => b.User)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(b => b.Id == bienId);
+
+            if (bien == null) return null;
+
+            var agentId = await ResolveAgentForBienAsync(bien, fallbackAgentUserId);
+            string? agentNom = null;
+            if (!string.IsNullOrWhiteSpace(agentId))
+            {
+                var agentUser = await _userManager.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == agentId);
+                if (agentUser != null)
+                {
+                    agentNom = BuildUserLabel(agentUser);
+                }
+            }
+
+            return new BienDetailsDto
+            {
+                Id = bien.Id,
+                Titre = bien.Titre,
+                Adresse = bien.Adresse,
+                Surface = bien.Surface,
+                Prix = bien.Prix,
+                VendeurNom = bien.User?.Nom ?? bien.User?.Email,
+                VendeurId = bien.UserId,
+                AgentId = agentId,
+                AgentNom = agentNom,
+                StatutCommercial = bien.StatutCommercial
+            };
+        }
+
+        public async Task<ServiceResult<int>> CreateContratAsync(int saleTransactionId, string? conditionsPaiement, string? actorUserId)
+        {
+            var sale = await _context.Sales
+                .Include(s => s.BienImmobilier)
+                    .ThenInclude(b => b!.User)
+                .Include(s => s.Buyer)
+                .Include(s => s.Seller)
+                .Include(s => s.Agent)
+                .Include(s => s.Contrat)
+                .FirstOrDefaultAsync(s => s.Id == saleTransactionId);
+
+            if (sale == null)
+                return ServiceResult<int>.Fail(ServiceErrorCode.NotFound, "Transaction introuvable.");
+
+            if (sale.Contrat != null)
+                return ServiceResult<int>.Fail(ServiceErrorCode.BadRequest, "Un contrat existe déjà pour cette transaction.");
+
+            if (sale.BienImmobilier == null)
+                return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "Le bien associé à la transaction est introuvable.");
+
+            if (sale.Amount <= 0)
+                return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "Le montant de la transaction est invalide pour générer un contrat.");
+
+            if (string.IsNullOrWhiteSpace(sale.BuyerId) || sale.Buyer == null)
+                return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "La transaction doit contenir un acheteur valide.");
+
+            if (string.IsNullOrWhiteSpace(sale.SellerId) || sale.Seller == null)
+                return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "La transaction doit contenir un vendeur valide.");
+
+            if (string.IsNullOrWhiteSpace(sale.AgentId) || sale.Agent == null)
+                return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "La transaction doit contenir un agent valide.");
+
+            if (string.IsNullOrWhiteSpace(sale.BienImmobilier.UserId))
+                return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "Le propriétaire du bien n'est pas renseigné.");
+
+            if (!string.Equals(sale.SellerId, sale.BienImmobilier.UserId, StringComparison.OrdinalIgnoreCase))
+                return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "Le vendeur de la transaction ne correspond pas au propriétaire actuel du bien.");
+
+            if (string.IsNullOrWhiteSpace(sale.BienImmobilier.Titre) || string.IsNullOrWhiteSpace(sale.BienImmobilier.Adresse))
+                return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "Le bien doit avoir un titre et une adresse pour générer le contrat.");
+
+            if (string.IsNullOrWhiteSpace(conditionsPaiement))
+                return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "Veuillez renseigner les conditions de paiement du contrat.");
+
+            var buyerName = sale.Buyer.Nom ?? sale.Buyer.Email;
+            var sellerName = sale.Seller.Nom ?? sale.Seller.Email;
+            var agentName = sale.Agent.Nom ?? sale.Agent.Email;
+            if (string.IsNullOrWhiteSpace(buyerName) || string.IsNullOrWhiteSpace(sellerName) || string.IsNullOrWhiteSpace(agentName))
+                return ServiceResult<int>.Fail(ServiceErrorCode.Validation, "Les informations des parties (acheteur, vendeur, agent) sont incomplètes.");
+
+            var numero = $"CONTRAT-{DateTime.Now:yyyyMMdd}-{saleTransactionId:D4}";
+
+            var contrat = new Contrat
+            {
+                SaleTransactionId = saleTransactionId,
+                NumeroContrat = numero,
+                DateSignature = DateTime.Today,
+                ContractStatus = "Signé",
+                NomAcheteur = buyerName,
+                NomVendeur = sellerName,
+                NomAgent = agentName,
+                TitreBien = sale.BienImmobilier.Titre,
+                AdresseBien = sale.BienImmobilier.Adresse,
+                SurfaceBien = sale.BienImmobilier.Surface,
+                PrixContrat = sale.Amount,
+                ConditionsPaiement = conditionsPaiement?.Trim(),
+                DateCreation = DateTime.Now
+            };
+
+            _context.Contrats.Add(contrat);
+
+            // Mettre le bien en cours de vente (retrait du shop)
+            if (sale.BienImmobilier != null)
+            {
+                sale.BienImmobilier.StatutCommercial = "En cours de vente";
+                sale.BienImmobilier.IsPublished = false;
+                sale.BienImmobilier.PublicationStatus = "Refusé";
+                _context.Update(sale.BienImmobilier);
+            }
+
+            await _context.SaveChangesAsync();
+
+            await _auditLogService.LogAsync(actorUserId, "Create", "Contrat", contrat.Id,
+                $"Contrat {numero} créé pour la transaction #{saleTransactionId} — '{contrat.TitreBien}'.");
+
+            return ServiceResult<int>.Ok(contrat.Id, $"Contrat {numero} généré avec succès. Le bien est maintenant En cours de vente.");
+        }
+
+        private async Task<string?> ResolveAgentForBienAsync(BienImmobilier bien, string? fallbackAgentUserId)
+        {
+            if (!string.IsNullOrWhiteSpace(bien.PublicationValidatedByAdminId))
+            {
+                return bien.PublicationValidatedByAdminId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(bien.UserId))
+            {
+                var owner = await _userManager.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == bien.UserId);
+                if (owner != null)
+                {
+                    var isAdmin = await _userManager.IsInRoleAsync(owner, "Admin");
+                    var isSuperAdmin = await _userManager.IsInRoleAsync(owner, "SuperAdmin");
+                    if (isAdmin || isSuperAdmin)
+                    {
+                        return owner.Id;
+                    }
+                }
+            }
+
+            return string.IsNullOrWhiteSpace(fallbackAgentUserId) ? null : fallbackAgentUserId;
+        }
+
+        public async Task<ServiceResult> ExecuteContratAsync(int contratId, string actorUserId)
+        {
+            var contrat = await _context.Contrats
+                .Include(c => c.SaleTransaction)
+                    .ThenInclude(s => s!.BienImmobilier)
+                .FirstOrDefaultAsync(c => c.Id == contratId);
+
+            if (contrat == null)
+                return ServiceResult.Fail(ServiceErrorCode.NotFound, "Contrat introuvable.");
+
+            if (contrat.ContractStatus == "Exécuté")
+                return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Ce contrat est déjà exécuté.");
+
+            if (contrat.ContractStatus == "Annulé")
+                return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Impossible d'exécuter un contrat annulé.");
+
+            contrat.ContractStatus = "Exécuté";
+            contrat.ExecutePar = actorUserId;
+            _context.Update(contrat);
+
+            // Marquer le bien comme vendu
+            var bien = contrat.SaleTransaction?.BienImmobilier;
+            if (bien != null)
+            {
+                bien.StatutCommercial = "Vendu";
+                bien.IsPublished = false;
+                bien.PublicationStatus = "Refusé";
+                _context.Update(bien);
+            }
+
+            // Mettre à jour le statut de transaction
+            if (contrat.SaleTransaction != null)
+            {
+                contrat.SaleTransaction.TransactionStatus = "Finalisée";
+                _context.Update(contrat.SaleTransaction);
+            }
+
+            await _context.SaveChangesAsync();
+
+            await _auditLogService.LogAsync(actorUserId, "Execute", "Contrat", contratId,
+                $"Contrat {contrat.NumeroContrat} exécuté — bien '{bien?.Titre}' marqué comme Vendu.");
+
+            await TryRecomputePerformanceAsync();
+
+            return ServiceResult.Ok("Contrat exécuté. Le bien est maintenant marqué comme Vendu.");
+        }
+
+        public async Task<ServiceResult> AddVersementAsync(int saleId, decimal montant, string modePaiement, string? note, string actorUserId)
+        {
+            var sale = await _context.Sales
+                .Include(s => s.Versements)
+                .Include(s => s.Contrat)
+                .Include(s => s.BienImmobilier)
+                .FirstOrDefaultAsync(s => s.Id == saleId);
+
+            if (sale == null)
+                return ServiceResult.Fail(ServiceErrorCode.NotFound, "Transaction introuvable.");
+
+            if (montant <= 0)
+                return ServiceResult.Fail(ServiceErrorCode.Validation, "Le montant du versement doit être supérieur à 0.");
+
+            var paymentMethods = await GetPaymentMethodsAsync();
+            if (string.IsNullOrWhiteSpace(modePaiement))
+                return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Mode de paiement invalide.");
+
+            var selectedPaymentMethod = paymentMethods.FirstOrDefault(
+                m => string.Equals(m, modePaiement, StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrWhiteSpace(selectedPaymentMethod))
+                return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Mode de paiement invalide.");
+
+            // Règles métier
+            if (sale.StatutPaiementDetaille == "Complet")
+                return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Paiement déjà soldé. Aucun versement supplémentaire n'est possible.");
+
+            if (sale.Contrat == null)
+                return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Aucun contrat n'est disponible pour cette transaction. Les versements sont bloqués.");
+
+            if (sale.Contrat?.ContractStatus == "Annulé")
+                return ServiceResult.Fail(ServiceErrorCode.BadRequest, "Contrat annulé. Impossible d'ajouter un versement.");
+
+            var dejaPayé = sale.Versements.Sum(v => v.Montant);
+            var total = sale.Amount;
+
+            if (dejaPayé + montant > total)
+                return ServiceResult.Fail(ServiceErrorCode.Validation,
+                    $"Le versement ({montant:N2} DT) dépasse le montant restant à payer ({(total - dejaPayé):N2} DT). Versement rejeté.");
+
+            var versement = new Versement
+            {
+                SaleTransactionId = saleId,
+                Montant = montant,
+                DateVersement = DateTime.Today,
+                ModePaiement = selectedPaymentMethod,
+                Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+                CreatedAt = DateTime.Now,
+                AjoutePar = actorUserId
+            };
+
+            _context.Versements.Add(versement);
+
+            // Recalculer le statut
+            var nouveauTotal = dejaPayé + montant;
+            if (nouveauTotal >= total)
+            {
+                sale.StatutPaiementDetaille = "Complet";
+                sale.PaymentStatus = "Payé";
+                sale.PaymentMethod = selectedPaymentMethod;
+                sale.PaidAt = DateTime.Now;
+
+                // Bien vendu si paiement complet
+                if (sale.BienImmobilier != null)
+                {
+                    sale.BienImmobilier.StatutCommercial = "Vendu";
+                    sale.BienImmobilier.IsPublished = false;
+                    sale.BienImmobilier.PublicationStatus = "Refusé";
+                    _context.Update(sale.BienImmobilier);
+                }
+            }
+            else
+            {
+                sale.StatutPaiementDetaille = "Partiel";
+                sale.PaymentStatus = "En attente";
+                sale.PaymentMethod = selectedPaymentMethod;
+                sale.PaidAt = null;
+            }
+
+            _context.Update(sale);
+            await _context.SaveChangesAsync();
+
+            await _auditLogService.LogAsync(actorUserId, "AddVersement", "SaleTransaction", saleId,
+                $"Versement {montant:N2} DT ({modePaiement}) ajouté — statut paiement : {sale.StatutPaiementDetaille}.");
+
+            await TryRecomputePerformanceAsync();
+
+            return ServiceResult.Ok($"Versement de {montant:N2} DT enregistré. Statut : {sale.StatutPaiementDetaille}.");
+        }
+
+        public async Task<SaleTransactionDetail?> GetTransactionDetailAsync(int saleId)
+        {
+            var sale = await _context.Sales
+                .Include(s => s.BienImmobilier)
+                .Include(s => s.Buyer)
+                .Include(s => s.Seller)
+                .Include(s => s.Agent)
+                .Include(s => s.Contrat)
+                    .ThenInclude(c => c!.ExecuteParUser)
+                .Include(s => s.Versements)
+                    .ThenInclude(v => v.AjouteParUser)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == saleId);
+
+            if (sale == null) return null;
+
+            var montantPaye = sale.Versements.Sum(v => v.Montant);
+            var paymentMethods = await GetPaymentMethodsAsync();
+
+            return new SaleTransactionDetail
+            {
+                Transaction = sale,
+                Contrat = sale.Contrat,
+                Versements = sale.Versements.OrderBy(v => v.DateVersement).ToList(),
+                MontantTotal = sale.Amount,
+                MontantPaye = montantPaye,
+                ResteAPayer = sale.Amount - montantPaye,
+                StatutPaiement = sale.StatutPaiementDetaille,
+                PaymentMethods = paymentMethods
+            };
+        }
+
+        private async Task TryRecomputePerformanceAsync()
+        {
+            try
+            {
+                await _agentPerformanceService.RecomputeAllAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Recalcul automatique des performances agents échoué. L'opération métier principale reste validée.");
+            }
         }
     }
 }

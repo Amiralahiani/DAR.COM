@@ -15,6 +15,10 @@ namespace RealEstateAdmin.Data
         public DbSet<Message> Messages { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<SaleTransaction> Sales { get; set; }
+        public DbSet<AppSetting> AppSettings { get; set; }
+        public DbSet<AgentPerformance> AgentPerformances { get; set; }
+        public DbSet<Contrat> Contrats { get; set; }
+        public DbSet<Versement> Versements { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -29,7 +33,17 @@ namespace RealEstateAdmin.Data
                 entity.Property(e => e.Nom);
                 entity.Property(e => e.UserName);
                 entity.Property(e => e.Email);
+                entity.Property(e => e.DateInscription);
                 entity.Property(e => e.LockoutEnd);
+            });
+
+            // Configuration for AgentPerformance
+            modelBuilder.Entity<AgentPerformance>(entity =>
+            {
+                entity.HasKey(e => e.AgentId);
+                entity.Property(e => e.AgentId).HasMaxLength(450);
+                entity.Property(e => e.ValeurTotaleVendue).HasPrecision(18, 2);
+                entity.Property(e => e.LastComputed).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
             });
 
             // Configuration pour BienImmobilier
@@ -96,10 +110,13 @@ namespace RealEstateAdmin.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.BuyerId).HasMaxLength(450);
                 entity.Property(e => e.SellerId).HasMaxLength(450);
+                entity.Property(e => e.AgentId).HasMaxLength(450);
                 entity.Property(e => e.Amount).HasPrecision(18, 2);
                 entity.Property(e => e.PaymentMethod).HasMaxLength(50).HasDefaultValue("Virement");
                 entity.Property(e => e.PaymentStatus).HasMaxLength(50).HasDefaultValue("En attente");
                 entity.Property(e => e.TransactionStatus).HasMaxLength(50).HasDefaultValue("Finalisée");
+                entity.Property(e => e.StatutPaiementDetaille).HasMaxLength(50).HasDefaultValue("En attente");
+                entity.Property(e => e.NbVisites).HasDefaultValue(0);
                 entity.Property(e => e.Notes).HasMaxLength(1000);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
@@ -117,6 +134,64 @@ namespace RealEstateAdmin.Data
                 entity.HasOne(e => e.Seller)
                     .WithMany()
                     .HasForeignKey(e => e.SellerId)
+                    .OnDelete(DeleteBehavior.SetNull)
+                    .IsRequired(false);
+            });
+
+            // Configuration for AppSetting
+            modelBuilder.Entity<AppSetting>(entity =>
+            {
+                entity.HasKey(e => e.Key);
+                entity.Property(e => e.Key).HasMaxLength(200);
+                entity.Property(e => e.Value).HasMaxLength(2000);
+            });
+
+            // Configuration pour Contrat
+            modelBuilder.Entity<Contrat>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.NumeroContrat).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.ContractStatus).HasMaxLength(50).HasDefaultValue("Brouillon");
+                entity.Property(e => e.NomAcheteur).HasMaxLength(200);
+                entity.Property(e => e.NomVendeur).HasMaxLength(200);
+                entity.Property(e => e.NomAgent).HasMaxLength(200);
+                entity.Property(e => e.TitreBien).HasMaxLength(200);
+                entity.Property(e => e.AdresseBien).HasMaxLength(500);
+                entity.Property(e => e.PrixContrat).HasPrecision(18, 2);
+                entity.Property(e => e.ConditionsPaiement).HasMaxLength(2000);
+                entity.Property(e => e.ExecutePar).HasMaxLength(450);
+                entity.Property(e => e.DateCreation).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                entity.HasOne(e => e.SaleTransaction)
+                    .WithOne(s => s.Contrat)
+                    .HasForeignKey<Contrat>(e => e.SaleTransactionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.ExecuteParUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.ExecutePar)
+                    .OnDelete(DeleteBehavior.SetNull)
+                    .IsRequired(false);
+            });
+
+            // Configuration pour Versement
+            modelBuilder.Entity<Versement>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Montant).HasPrecision(18, 2);
+                entity.Property(e => e.ModePaiement).HasMaxLength(50).HasDefaultValue("Virement");
+                entity.Property(e => e.Note).HasMaxLength(500);
+                entity.Property(e => e.AjoutePar).HasMaxLength(450);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                entity.HasOne(e => e.SaleTransaction)
+                    .WithMany(s => s.Versements)
+                    .HasForeignKey(e => e.SaleTransactionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.AjouteParUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.AjoutePar)
                     .OnDelete(DeleteBehavior.SetNull)
                     .IsRequired(false);
             });

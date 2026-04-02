@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using RealEstateAdmin.Data;
 using RealEstateAdmin.Models;
 
 namespace RealEstateAdmin.Services
@@ -8,15 +9,18 @@ namespace RealEstateAdmin.Services
     {
         private static readonly string[] InternalAllowedRoles = { "Utilisateur", "Admin", "SuperAdmin" };
 
+        private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IAuditLogService _auditLogService;
 
         public UserManagementService(
+            ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
             IAuditLogService auditLogService)
         {
+            _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _roleManager = roleManager;
             _auditLogService = auditLogService;
@@ -216,6 +220,14 @@ namespace RealEstateAdmin.Services
             if (!string.IsNullOrWhiteSpace(actorUserId) && actorUserId == user.Id)
             {
                 return ServiceResult.Fail(ServiceErrorCode.Forbidden, "Vous ne pouvez pas supprimer votre propre compte.");
+            }
+
+            var ownsBiens = await _applicationDbContext.Biens.AnyAsync(b => b.UserId == user.Id);
+            if (ownsBiens)
+            {
+                return ServiceResult.Fail(
+                    ServiceErrorCode.Validation,
+                    "Suppression impossible: ce compte possède des biens. Réassignez d'abord ces biens à un autre agent.");
             }
 
             var email = user.Email ?? user.UserName ?? user.Id;

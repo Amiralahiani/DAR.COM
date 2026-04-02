@@ -49,7 +49,7 @@ namespace RealEstateAdmin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> MarkTreated(int id)
+        public async Task<IActionResult> Accept(int id)
         {
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null)
@@ -57,7 +57,27 @@ namespace RealEstateAdmin.Controllers
                 return RedirectToAction("Login", "Account");
             }
 
-            var result = await _agendaService.MarkEventTreatedAsync(id, currentUser.Id, User.IsInRole("SuperAdmin"));
+            var result = await _agendaService.AcceptEventAsync(id, currentUser.Id, User.IsInRole("SuperAdmin"));
+            if (result.Success)
+            {
+                TempData["Success"] = result.Message;
+                return RedirectToAction(nameof(Index));
+            }
+
+            return HandleResult(result);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Refuse(int id)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null)
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var result = await _agendaService.RefuseEventAsync(id, currentUser.Id, User.IsInRole("SuperAdmin"));
             if (result.Success)
             {
                 TempData["Success"] = result.Message;

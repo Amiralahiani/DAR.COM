@@ -61,6 +61,7 @@ builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IAgentPerformanceService, AgentPerformanceService>();
 builder.Services.AddScoped<IStartupAccountSeeder, StartupAccountSeeder>();
 builder.Services.AddHttpClient();
+builder.Services.AddScoped<IMLService, MLService>();
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

@@ -122,6 +122,9 @@
             <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Shop" && ViewContext.RouteData.Values["action"]?.ToString() == "Solde" ? "active" : "")" asp-controller="Shop" asp-action="Solde">
                 <i class="bi bi-tag"></i> En Solde
             </a>
+            <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Chatbot" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")" asp-controller="Chatbot" asp-action="Index">
+                <i class="bi bi-chat-left-text"></i> Chatbot
+            </a>
             <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "Privacy" ? "active" : "")" asp-controller="Home" asp-action="Privacy">
                 <i class="bi bi-shield-lock"></i> Confidentialité
             </a>

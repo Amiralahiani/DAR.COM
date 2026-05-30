@@ -11,11 +11,16 @@ namespace RealEstateAdmin.Controllers
     {
         private readonly IUserManagementService _userService;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IMLService _mlService;
 
-        public UtilisateurController(IUserManagementService userService, UserManager<ApplicationUser> userManager)
+        public UtilisateurController(
+            IUserManagementService userService,
+            UserManager<ApplicationUser> userManager,
+            IMLService mlService)
         {
             _userService = userService;
             _userManager = userManager;
+            _mlService = mlService;
         }
 
         // GET: Utilisateur
@@ -180,6 +185,26 @@ namespace RealEstateAdmin.Controllers
             }
 
             return HandleResult(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ClientProfile(string? id)
+        {
+            if (id is null) return NotFound();
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user is null) return NotFound();
+
+            var behavior    = await _mlService.EstimateBehaviorAsync(id);
+            var profile     = await _mlService.GetClientProfileAsync(id, behavior);
+            var mlAvailable = profile is not null;
+
+            ViewBag.UserName    = user.Nom ?? user.Email ?? id;
+            ViewBag.UserEmail   = user.Email ?? "";
+            ViewBag.MlAvailable = mlAvailable;
+            ViewBag.Behavior    = behavior;
+
+            return View(profile);
         }
 
         private IActionResult HandleResult(ServiceResult result)

@@ -43,6 +43,15 @@ namespace RealEstateAdmin.Services
         }
 
 
+        public async Task<BienImmobilier?> GetBienByIdAsync(int id)
+        {
+            return await _context.Biens
+                .Include(b => b.User)
+                .Include(b => b.Images)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(b => b.Id == id && b.IsPublished && b.PublicationStatus == "Publié");
+        }
+
         public async Task<ShopIndexData> GetSoldeDataAsync(ShopFilter filter)
         {
             return await GetIndexDataAsync(NormalizeFilter(filter, saleOnly: true));

@@ -19,6 +19,9 @@ namespace RealEstateAdmin.Data
         public DbSet<AgentPerformance> AgentPerformances { get; set; }
         public DbSet<Contrat> Contrats { get; set; }
         public DbSet<Versement> Versements { get; set; }
+        public DbSet<Annonce> Annonces { get; set; }
+        public DbSet<AnnoncePhoto> AnnoncePhotos { get; set; }
+        public DbSet<BienView> BienViews { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -172,6 +175,46 @@ namespace RealEstateAdmin.Data
                     .HasForeignKey(e => e.ExecutePar)
                     .OnDelete(DeleteBehavior.SetNull)
                     .IsRequired(false);
+            });
+
+            // Configuration pour Annonce
+            modelBuilder.Entity<Annonce>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.UserId).HasMaxLength(450);
+                entity.Property(e => e.Gouvernorat).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Delegation).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(5000);
+                entity.Property(e => e.Statut).HasMaxLength(50).HasDefaultValue("En attente");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                entity.Property(e => e.HasAscenseur).HasDefaultValue(false);
+                entity.Property(e => e.HasBalcon).HasDefaultValue(false);
+                entity.Property(e => e.HasChauffageCentral).HasDefaultValue(false);
+                entity.Property(e => e.HasClimatisation).HasDefaultValue(false);
+                entity.Property(e => e.HasGarage).HasDefaultValue(false);
+                entity.Property(e => e.HasJardin).HasDefaultValue(false);
+                entity.Property(e => e.HasParking).HasDefaultValue(false);
+                entity.Property(e => e.HasPiscine).HasDefaultValue(false);
+                entity.Property(e => e.HasTerrasse).HasDefaultValue(false);
+            });
+
+            modelBuilder.Entity<AnnoncePhoto>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Url).IsRequired().HasMaxLength(1000);
+                entity.HasOne(e => e.Annonce)
+                    .WithMany(a => a.Photos)
+                    .HasForeignKey(e => e.AnnonceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<BienView>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+                entity.Property(e => e.Prix).HasPrecision(18, 2);
+                entity.Property(e => e.ViewedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                entity.HasIndex(e => new { e.UserId, e.ViewedAt });
             });
 
             // Configuration pour Versement

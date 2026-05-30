@@ -1,0 +1,339 @@
+@{
+    ViewData["Title"] = "Ajouter un bien";
+    Layout = "_WizardLayout";
+}
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{ var aft = Antiforgery.GetAndStoreTokens(Context).RequestToken; }
+
+<meta name="request-verification-token" content="@aft" />
+
+<div class="wz-shell">
+
+    <!-- ══════════════════════════════ HEADER ══════════════════════════════ -->
+    <header class="wz-header">
+        <a class="wz-logo" asp-controller="Home" asp-action="Index">
+            <img src="~/images/logo1.jpg" alt="DAR.COM" />
+            <span>DAR.COM</span>
+        </a>
+        <div class="wz-header-actions">
+            <a href="#" class="wz-btn-help" data-bs-toggle="modal" data-bs-target="#helpModal">
+                <i class="bi bi-question-circle"></i> Des questions ?
+            </a>
+            <a asp-controller="BienImmobilier" asp-action="Index" class="wz-btn-save">
+                <i class="bi bi-floppy"></i> Enregistrer et quitter
+            </a>
+        </div>
+    </header>
+
+    <!-- ═══════════════════════════════ MAIN ═══════════════════════════════ -->
+    <main class="wz-main">
+
+        <!-- LEFT COL — FORM -->
+        <div class="wz-form-col">
+
+            <!-- ─────────────── ÉTAPE 1 ─────────────── -->
+            <section class="wz-step" data-step="1">
+                <span class="wz-step-label">Étape 1</span>
+                <h1 class="wz-step-title">Décrivez votre bien</h1>
+                <p class="wz-step-desc">
+                    Renseignez la localisation, la surface et les équipements de votre bien
+                    pour que les acheteurs trouvent ce qu'ils cherchent.
+                </p>
+
+                <div class="wz-form-body">
+
+                    <!-- Gouvernorat -->
+                    <div class="mb-4">
+                        <label class="wz-label" for="gouvernorat">Gouvernorat</label>
+                        <select class="wz-select" id="gouvernorat">
+                            <option value="">-- Sélectionnez --</option>
+                            <option>Ariana</option>
+                            <option>Béja</option>
+                            <option>Ben Arous</option>
+                            <option>Bizerte</option>
+                            <option>Gabès</option>
+                            <option>Gafsa</option>
+                            <option>Jendouba</option>
+                            <option>Kairouan</option>
+                            <option>Kasserine</option>
+                            <option>Kébili</option>
+                            <option>Kef</option>
+                            <option>Mahdia</option>
+                            <option>Manouba</option>
+                            <option>Médenine</option>
+                            <option>Monastir</option>
+                            <option>Nabeul</option>
+                            <option>Sfax</option>
+                            <option>Sidi Bouzid</option>
+                            <option>Siliana</option>
+                            <option>Sousse</option>
+                            <option>Tataouine</option>
+                            <option>Tozeur</option>
+                            <option>Tunis</option>
+                            <option>Zaghouan</option>
+                        </select>
+                        <span class="wz-error" id="err-gouvernorat"></span>
+                    </div>
+
+                    <!-- Délégation -->
+                    <div class="mb-4">
+                        <label class="wz-label" for="delegation">Délégation</label>
+                        <select class="wz-select" id="delegation" disabled>
+                            <option value="">-- Sélectionnez d'abord le gouvernorat --</option>
+                        </select>
+                        <span class="wz-error" id="err-delegation"></span>
+                    </div>
+
+                    <!-- Surface + Chambres -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-sm-6">
+                            <label class="wz-label" for="surface">Surface (m²)</label>
+                            <input type="number" class="wz-input" id="surface" min="1" placeholder="Ex. 120" />
+                            <span class="wz-error" id="err-surface"></span>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="wz-label">Chambres</label>
+                            <div class="wz-stepper">
+                                <button type="button" class="wz-stepper-btn" id="dec-chambres">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <span class="wz-stepper-val" id="val-chambres">0</span>
+                                <button type="button" class="wz-stepper-btn" id="inc-chambres">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Équipements -->
+                    <div class="mb-2">
+                        <label class="wz-label mb-3">Équipements</label>
+                        <div class="wz-equip-grid">
+                            <div class="wz-equip-card" data-equip="hasAscenseur">
+                                <i class="bi bi-arrow-up-square-fill"></i>
+                                <span>Ascenseur</span>
+                            </div>
+                            <div class="wz-equip-card" data-equip="hasBalcon">
+                                <i class="bi bi-grid-3x3-gap-fill"></i>
+                                <span>Balcon</span>
+                            </div>
+                            <div class="wz-equip-card" data-equip="hasChauffageCentral">
+                                <i class="bi bi-thermometer-half"></i>
+                                <span>Chauffage central</span>
+                            </div>
+                            <div class="wz-equip-card" data-equip="hasClimatisation">
+                                <i class="bi bi-snow2"></i>
+                                <span>Climatisation</span>
+                            </div>
+                            <div class="wz-equip-card" data-equip="hasGarage">
+                                <i class="bi bi-car-front-fill"></i>
+                                <span>Garage</span>
+                            </div>
+                            <div class="wz-equip-card" data-equip="hasJardin">
+                                <i class="bi bi-tree-fill"></i>
+                                <span>Jardin</span>
+                            </div>
+                            <div class="wz-equip-card" data-equip="hasParking">
+                                <i class="bi bi-p-circle-fill"></i>
+                                <span>Parking</span>
+                            </div>
+                            <div class="wz-equip-card" data-equip="hasPiscine">
+                                <i class="bi bi-droplet-fill"></i>
+                                <span>Piscine</span>
+                            </div>
+                            <div class="wz-equip-card" data-equip="hasTerrasse">
+                                <i class="bi bi-house-check-fill"></i>
+                                <span>Terrasse</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- ─────────────── ÉTAPE 2 ─────────────── -->
+            <section class="wz-step d-none" data-step="2">
+                <span class="wz-step-label">Étape 2</span>
+                <h1 class="wz-step-title">Photos et description</h1>
+                <p class="wz-step-desc">
+                    Ajoutez des photos attractives et rédigez (ou générez) une description
+                    percutante pour séduire les acheteurs.
+                </p>
+
+                <div class="wz-form-body">
+
+                    <!-- Upload zone -->
+                    <div class="mb-4">
+                        <label class="wz-label mb-3">Photos du bien</label>
+                        <div class="wz-drop-zone" id="dropZone">
+                            <i class="bi bi-cloud-arrow-up-fill wz-drop-icon"></i>
+                            <p class="wz-drop-text">Glissez vos photos ici ou</p>
+                            <label class="wz-btn-upload" for="photoInput">
+                                <i class="bi bi-plus-lg"></i> Parcourir
+                            </label>
+                            <input type="file" id="photoInput" accept="image/jpeg,image/png,image/webp"
+                                   multiple style="display:none" />
+                        </div>
+                        <div class="wz-photo-error mt-2" id="photoError" style="display:none"></div>
+                        <div class="wz-photo-grid mt-3" id="photoGrid"></div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-2">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label class="wz-label mb-0" for="description">Description</label>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="wz-btn-gen" id="btnGenerate">
+                                    <i class="bi bi-stars"></i>
+                                    <span id="genBtnLabel">Générer la description</span>
+                                </button>
+                                <button type="button" class="wz-btn-gen wz-btn-regen d-none" id="btnRegenerate">
+                                    <i class="bi bi-arrow-clockwise"></i> Régénérer
+                                </button>
+                            </div>
+                        </div>
+                        <div class="wz-gen-loading d-none" id="genLoading">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span>Génération en cours…</span>
+                        </div>
+                        <div class="wz-gen-error d-none" id="genError"></div>
+                        <textarea class="wz-textarea" id="description" rows="6"
+                                  placeholder="Décrivez votre bien : emplacement, caractéristiques, atouts…"></textarea>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- ─────────────── ÉTAPE 3 ─────────────── -->
+            <section class="wz-step d-none" data-step="3">
+                <span class="wz-step-label">Étape 3</span>
+                <h1 class="wz-step-title">Terminez et publiez</h1>
+                <p class="wz-step-desc">
+                    Fixez votre prix, consultez le récapitulatif et publiez votre annonce.
+                </p>
+
+                <div class="wz-form-body">
+
+                    <!-- Prix -->
+                    <div class="mb-4">
+                        <label class="wz-label" for="prix">Prix de vente</label>
+                        <div class="wz-input-suffix-wrap">
+                            <input type="number" class="wz-input" id="prix" min="1" placeholder="Ex. 450000" />
+                            <span class="wz-input-suffix">TND</span>
+                        </div>
+                        <span class="wz-error" id="err-prix"></span>
+                    </div>
+
+                    <!-- Prédiction ML -->
+                    <div class="mb-5">
+                        <button type="button" class="wz-btn-predict" id="btnPredict">
+                            <i class="bi bi-graph-up-arrow"></i>
+                            <span id="predictBtnLabel">Prédire le prix</span>
+                        </button>
+                        <div class="wz-predict-loading d-none" id="predictLoading">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span>Calcul en cours…</span>
+                        </div>
+                        <div class="wz-predict-suggestion d-none" id="predictSuggestion">
+                            <span class="wz-suggest-label">Prix estimé :</span>
+                            <span class="wz-suggest-val" id="predictedPrice"></span>
+                            <button type="button" class="wz-btn-use" id="btnUsePrice">Utiliser</button>
+                        </div>
+                        <div class="wz-gen-error d-none" id="predictError"></div>
+                    </div>
+
+                    <!-- Récapitulatif -->
+                    <div class="wz-recap">
+                        <h3 class="wz-recap-title">Récapitulatif</h3>
+                        <div class="wz-recap-grid" id="recapGrid">
+                            <!-- Populated by wizard.js -->
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </div><!-- /wz-form-col -->
+
+        <!-- RIGHT COL — ILLUSTRATION -->
+        <div class="wz-illus-col" aria-hidden="true">
+            <div class="wz-illustration">
+                <div class="wz-illus-card">
+                    <div class="wz-illus-house">
+                        <i class="bi bi-houses-fill"></i>
+                    </div>
+                    <p class="wz-illus-tagline">Publiez votre bien<br>en quelques minutes</p>
+                    <div class="wz-illus-dots">
+                        <span class="wz-dot active" data-dot="1"></span>
+                        <span class="wz-dot" data-dot="2"></span>
+                        <span class="wz-dot" data-dot="3"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ══════════════════════════════ FOOTER ══════════════════════════════ -->
+    <footer class="wz-footer">
+        <div class="wz-progress-bar">
+            <div class="wz-progress-seg" data-seg="1"></div>
+            <div class="wz-progress-seg" data-seg="2"></div>
+            <div class="wz-progress-seg" data-seg="3"></div>
+        </div>
+        <div class="wz-nav">
+            <button type="button" class="wz-btn-back" id="btnBack">
+                <i class="bi bi-arrow-left"></i> Retour
+            </button>
+            <button type="button" class="wz-btn-next" id="btnNext">
+                Suivant <i class="bi bi-arrow-right"></i>
+            </button>
+        </div>
+    </footer>
+
+</div><!-- /wz-shell -->
+
+<!-- Publish overlay -->
+<div class="wz-publish-overlay d-none" id="publishOverlay">
+    <div class="wz-publish-card">
+        <div class="wz-publish-spinner" id="publishSpinner">
+            <div class="spinner-border" role="status"></div>
+            <p>Publication en cours…</p>
+        </div>
+        <div class="wz-publish-success d-none" id="publishSuccess">
+            <i class="bi bi-check-circle-fill"></i>
+            <h3>Annonce publiée !</h3>
+            <p>Votre bien a été soumis avec succès.</p>
+            <a asp-controller="BienImmobilier" asp-action="Index" class="btn wz-btn-go">
+                Voir mes biens
+            </a>
+        </div>
+        <div class="wz-publish-error d-none" id="publishErrorCard">
+            <i class="bi bi-x-circle-fill text-danger"></i>
+            <h3>Erreur</h3>
+            <p id="publishErrorMsg"></p>
+            <button type="button" class="btn wz-btn-go" id="btnDismissPublish">Réessayer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 16px; border: none;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="helpModalLabel">
+                    <i class="bi bi-question-circle-fill text-warning me-2"></i>Aide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Étape 1 :</strong> Renseignez la localisation, la surface et les équipements.</p>
+                <p><strong>Étape 2 :</strong> Ajoutez vos photos (JPG / PNG / WebP, max 10 Mo) et rédigez une description.</p>
+                <p><strong>Étape 3 :</strong> Fixez votre prix et publiez votre annonce.</p>
+                <hr />
+                <p class="text-muted small">Pour toute assistance, contactez le support DAR.COM.</p>
+            </div>
+        </div>
+    </div>
+</div>

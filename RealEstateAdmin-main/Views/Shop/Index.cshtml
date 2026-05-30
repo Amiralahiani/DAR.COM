@@ -51,6 +51,66 @@
         </div>
     }
 
+    @{
+        var recs = ViewBag.Recommendations as List<RealEstateAdmin.Models.BienImmobilier>;
+    }
+    @if (recs != null && recs.Any())
+    {
+        <div class="mb-4">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <i class="bi bi-stars" style="color:#d6a547;font-size:1.3rem;"></i>
+                <h5 class="mb-0 fw-bold" style="color:#d6a547;">Recommandés pour vous</h5>
+                <span class="badge rounded-pill" style="background:#d6a54725;color:#d6a547;border:1px solid #d6a54750;">
+                    Sélection ML
+                </span>
+            </div>
+            <div class="row g-3">
+                @foreach (var rec in recs)
+                {
+                    var recImg = !string.IsNullOrWhiteSpace(rec.ImageUrl)
+                        ? rec.ImageUrl
+                        : rec.Images.FirstOrDefault()?.Url;
+                    var recPrice = rec.DiscountPercent > 0
+                        ? rec.Prix * (100 - rec.DiscountPercent) / 100m
+                        : rec.Prix;
+
+                    <div class="col-md-6 col-xl-3">
+                        <div class="card border-0 shadow-sm h-100" style="border-top:3px solid #d6a547 !important;">
+                            <a asp-controller="BienImmobilier" asp-action="Details" asp-route-id="@rec.Id" class="text-decoration-none">
+                                @if (!string.IsNullOrWhiteSpace(recImg))
+                                {
+                                    <img src="@recImg" alt="@rec.Titre" class="card-img-top" style="height:160px;object-fit:cover;" />
+                                }
+                                else
+                                {
+                                    <div class="d-flex align-items-center justify-content-center bg-secondary bg-opacity-10" style="height:160px;">
+                                        <i class="bi bi-image fs-1 text-muted"></i>
+                                    </div>
+                                }
+                            </a>
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <span class="badge rounded-pill bg-dark-subtle text-dark small">@rec.TypeTransaction</span>
+                                    <span class="fw-bold small" style="color:#d6a547;">@recPrice.ToString("N0") DT</span>
+                                </div>
+                                <h6 class="card-title mb-1 text-truncate" title="@rec.Titre">@rec.Titre</h6>
+                                <div class="small text-muted mb-2">
+                                    <i class="bi bi-geo-alt"></i> @(rec.Adresse ?? "N/A") &nbsp;·&nbsp;
+                                    <i class="bi bi-aspect-ratio"></i> @(rec.Surface ?? 0) m²
+                                </div>
+                                <a asp-controller="BienImmobilier" asp-action="Details" asp-route-id="@rec.Id"
+                                   class="btn btn-sm w-100" style="background:#d6a547;color:#0f172a;font-weight:600;">
+                                    Voir ce bien
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+        <hr class="mb-4" style="border-color:#2d3f55;" />
+    }
+
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-header shop-filter-header">
             <h5 class="mb-0 text-white"><i class="bi bi-funnel"></i> Filtres de recherche</h5>
@@ -201,7 +261,7 @@
 
                         <div class="col-lg-3 col-12">
                             <div class="shop-row-actions">
-                                <a asp-controller="BienImmobilier" asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">
+                                <a asp-controller="Shop" asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">
                                     Voir les détails
                                 </a>
 

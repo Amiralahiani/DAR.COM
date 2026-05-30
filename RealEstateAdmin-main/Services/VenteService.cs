@@ -17,6 +17,7 @@ namespace RealEstateAdmin.Services
         private readonly PdfExportService _pdfExportService;
         private readonly IAuditLogService _auditLogService;
         private readonly IAgentPerformanceService _agentPerformanceService;
+        private readonly IMLService _mlService;
         private readonly ILogger<VenteService> _logger;
 
         public VenteService(
@@ -25,6 +26,7 @@ namespace RealEstateAdmin.Services
             PdfExportService pdfExportService,
             IAuditLogService auditLogService,
             IAgentPerformanceService agentPerformanceService,
+            IMLService mlService,
             ILogger<VenteService> logger)
         {
             _context = context;
@@ -32,6 +34,7 @@ namespace RealEstateAdmin.Services
             _pdfExportService = pdfExportService;
             _auditLogService = auditLogService;
             _agentPerformanceService = agentPerformanceService;
+            _mlService = mlService;
             _logger = logger;
         }
 
@@ -345,6 +348,12 @@ namespace RealEstateAdmin.Services
                 $"Paiement mis à jour pour '{sale.BienImmobilier?.Titre}': {paymentMethod} / {paymentStatus}");
 
             await TryRecomputePerformanceAsync();
+
+            // Envoyer la vraie donnée au ML Engine quand le paiement est confirmé
+            if (paymentStatus == "Payé" && !string.IsNullOrWhiteSpace(sale.BuyerId) && sale.BienImmobilier != null)
+            {
+                await TrySendMlCollectAsync(sale, targetLead: 1);
+            }
 
             return ServiceResult.Ok("Paiement mis à jour avec succès.");
         }
@@ -716,6 +725,35 @@ namespace RealEstateAdmin.Services
                 StatutPaiement = sale.StatutPaiementDetaille,
                 PaymentMethods = paymentMethods
             };
+        }
+
+        private async Task TrySendMlCollectAsync(SaleTransaction sale, int targetLead)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(sale.BuyerId) || sale.BienImmobilier is null) return;
+
+                // On utilise les données de la transaction comme proxy du comportement réel
+                var behavior = new UserBehaviorData(
+                    AvgPriceViewed:      (double)sale.BienImmobilier.Prix,
+                    PropertyViewsCount:  Math.Max(sale.NbVisites, 1),
+                    FavoritesCount:      1,
+                    ContactAgentClicks:  2,
+                    AvgSurfaceViewed:    (double)sale.BienImmobilier.Surface,
+                    SessionDurationMins: 30.0
+                );
+
+                await _mlService.CollectAsync(
+                    userId:       sale.BuyerId,
+                    behavior:     behavior,
+                    targetLead:   targetLead,
+                    targetBudget: (double)sale.Amount
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Envoi ML collect échoué pour la transaction #{SaleId} — non bloquant.", sale.Id);
+            }
         }
 
         private async Task TryRecomputePerformanceAsync()

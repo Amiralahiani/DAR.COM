@@ -89,6 +89,12 @@
                                     <a asp-action="Details" asp-route-id="@item.UserId" class="btn btn-sm btn-info">
                                         <i class="bi bi-eye"></i> Détails
                                     </a>
+                                    @if (item.CurrentRole == "Utilisateur")
+                                    {
+                                        <a asp-action="ClientProfile" asp-route-id="@item.UserId" class="btn btn-sm" style="background:#d6a547;color:#0f172a;font-weight:600;">
+                                            <i class="bi bi-robot"></i> Profil ML
+                                        </a>
+                                    }
                                     @if (isSuperAdmin)
                                     {
                                         var canToggleSuspension = item.UserId != currentUserId && item.CurrentRole != "SuperAdmin";

@@ -1,0 +1,165 @@
+@model RealEstateAdmin.Models.BienImmobilier
+
+@{
+    ViewData["Title"] = Model.Titre;
+    var imageUrl = !string.IsNullOrWhiteSpace(Model.ImageUrl)
+        ? Model.ImageUrl
+        : Model.Images.FirstOrDefault()?.Url;
+    var hasDiscount  = Model.DiscountPercent > 0;
+    var displayPrice = hasDiscount ? Model.Prix * (100 - Model.DiscountPercent) / 100m : Model.Prix;
+    var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var canInteract   = currentUserId is not null && Model.UserId != currentUserId;
+    var canReserveVisit = canInteract && Model.StatutCommercial == "Disponible";
+    var canInterest     = canInteract && Model.StatutCommercial != "Vendu";
+}
+
+<div class="container py-4">
+
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour au Shop
+        </a>
+        <h1 class="mb-0 fs-4 fw-bold text-gradient">@Model.Titre</h1>
+    </div>
+
+    <div class="row g-4">
+
+        {{*— Image —*}}
+        <div class="col-lg-6">
+            @if (!string.IsNullOrWhiteSpace(imageUrl))
+            {
+                <img src="@imageUrl" alt="@Model.Titre"
+                     class="img-fluid rounded-3 shadow w-100"
+                     style="max-height:420px;object-fit:cover;" />
+            }
+            else
+            {
+                <div class="d-flex align-items-center justify-content-center bg-secondary bg-opacity-10 rounded-3"
+                     style="height:320px;">
+                    <i class="bi bi-image fs-1 text-muted"></i>
+                </div>
+            }
+
+            @if (Model.Images.Count > 1)
+            {
+                <div class="d-flex gap-2 mt-2 flex-wrap">
+                    @foreach (var img in Model.Images.Skip(1).Take(4))
+                    {
+                        <img src="@img.Url" alt="photo"
+                             class="rounded-2 border"
+                             style="height:72px;width:100px;object-fit:cover;" />
+                    }
+                </div>
+            }
+        </div>
+
+        {{*— Infos + Actions —*}}
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+
+                    {{*— Prix —*}}
+                    <div class="mb-3">
+                        @if (hasDiscount)
+                        {
+                            <div class="text-muted text-decoration-line-through small">@Model.Prix.ToString("N0") DT</div>
+                        }
+                        <div class="fs-2 fw-bold @(hasDiscount ? "text-danger" : "")" style="@(hasDiscount ? "" : "color:#d6a547;")">
+                            @displayPrice.ToString("N0") DT
+                        </div>
+                        @if (hasDiscount)
+                        {
+                            <span class="badge bg-danger">-@Model.DiscountPercent% de réduction</span>
+                        }
+                    </div>
+
+                    {{*— Badges statut —*}}
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge rounded-pill bg-dark-subtle text-dark">@Model.TypeTransaction</span>
+                        <span class="badge rounded-pill @(Model.StatutCommercial == "Vendu" ? "bg-secondary" : Model.StatutCommercial == "Réservé" ? "bg-warning text-dark" : "bg-success")">
+                            @Model.StatutCommercial
+                        </span>
+                    </div>
+
+                    {{*— Caractéristiques —*}}
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="p-2 rounded-2 bg-light text-center">
+                                <i class="bi bi-aspect-ratio text-primary"></i>
+                                <div class="fw-bold">@(Model.Surface ?? 0) m²</div>
+                                <small class="text-muted">Surface</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 rounded-2 bg-light text-center">
+                                <i class="bi bi-door-closed text-primary"></i>
+                                <div class="fw-bold">@(Model.NombrePieces ?? 0)</div>
+                                <small class="text-muted">Pièces</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.Adresse))
+                    {
+                        <div class="mb-3">
+                            <i class="bi bi-geo-alt text-muted"></i>
+                            <span class="text-muted">@Model.Adresse</span>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(Model.Description))
+                    {
+                        <p class="text-muted small mb-3">@Model.Description</p>
+                    }
+
+                    {{*— Actions —*}}
+                    @if (canInterest)
+                    {
+                        <form asp-controller="Shop" asp-action="ExpressInterest" asp-route-id="@Model.Id"
+                              method="post" class="d-grid mb-2">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-heart"></i> Je suis intéressé
+                            </button>
+                        </form>
+                    }
+
+                    @if (canReserveVisit)
+                    {
+                        <form asp-controller="Shop" asp-action="ReserveVisit" asp-route-id="@Model.Id"
+                              method="post" class="d-grid mb-2">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="visitSlot"
+                                   value="@DateTime.Now.AddDays(1).Date.AddHours(10).ToString("o")" />
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-calendar-check"></i> Réserver une visite
+                            </button>
+                        </form>
+                    }
+
+                    @if (canInteract && Model.StatutCommercial != "Vendu")
+                    {
+                        <form asp-controller="Shop" asp-action="RequestMeeting" asp-route-id="@Model.Id"
+                              method="post" class="d-grid">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="meetingSlot"
+                                   value="@DateTime.Now.AddDays(2).Date.AddHours(14).ToString("o")" />
+                            <button type="submit" class="btn btn-outline-secondary">
+                                <i class="bi bi-person-badge"></i> Demander un rendez-vous agent
+                            </button>
+                        </form>
+                    }
+
+                    @if (!canInteract && currentUserId is not null)
+                    {
+                        <div class="alert alert-info small mb-0">
+                            <i class="bi bi-info-circle"></i> C'est votre bien publié.
+                        </div>
+                    }
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

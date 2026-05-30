@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Chatbot IA</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* container */
+.chat-container {
+    width: 420px;
+    height: 600px;
+    background: #111827;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 0 25px rgba(0,0,0,0.4);
+}
+
+/* header */
+.header {
+    background: #1f2937;
+    color: white;
+    padding: 15px;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* chat area */
+#chatbox {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* messages */
+.msg {
+    padding: 10px 12px;
+    border-radius: 12px;
+    max-width: 75%;
+    line-height: 1.4;
+    font-size: 14px;
+    animation: fadeIn 0.2s ease-in;
+}
+
+.user {
+    align-self: flex-end;
+    background: #3b82f6;
+    color: white;
+    border-bottom-right-radius: 0;
+}
+
+.bot {
+    align-self: flex-start;
+    background: #374151;
+    color: white;
+    border-bottom-left-radius: 0;
+}
+
+/* input area */
+.input-box {
+    display: flex;
+    padding: 10px;
+    background: #1f2937;
+}
+
+input {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    outline: none;
+}
+
+button {
+    margin-left: 10px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    background: #3b82f6;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #2563eb;
+}
+
+/* animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+
+<body>
+
+<div class="chat-container">
+    <div class="header">🤖 Chatbot IA</div>
+
+    <div id="chatbox"></div>
+
+    <div class="input-box">
+        <input type="text" id="message" placeholder="Écris ton message..." onkeydown="handleKey(event)">
+        <button onclick="sendMessage()">Envoyer</button>
+    </div>
+</div>
+
+<script>
+async function sendMessage() {
+    const input = document.getElementById("message");
+    const chatbox = document.getElementById("chatbox");
+
+    const message = input.value.trim();
+    if (!message) return;
+
+    // user message
+    chatbox.innerHTML += `<div class="msg user">👤 ${message}</div>`;
+    input.value = "";
+    chatbox.scrollTop = chatbox.scrollHeight;
+
+    // loading fake
+    const loading = document.createElement("div");
+    loading.className = "msg bot";
+    loading.innerText = "🤖 ...";
+    chatbox.appendChild(loading);
+
+    const response = await fetch("http://127.0.0.1:8000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+    });
+
+    const data = await response.json();
+
+    // replace loading
+    loading.innerText = "🤖 " + data.response;
+
+    chatbox.scrollTop = chatbox.scrollHeight;
+}
+
+function handleKey(event) {
+    if (event.key === "Enter") {
+        sendMessage();
+    }
+}
+</script>
+
+</body>
+</html>

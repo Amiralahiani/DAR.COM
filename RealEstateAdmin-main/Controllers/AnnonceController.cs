@@ -124,8 +124,6 @@ namespace RealEstateAdmin.Controllers
 
         /// <summary>
         /// Génère une description immobilière à partir des données de l'étape 1.
-        /// Aucune dépendance externe (OpenRouter/Gemini supprimés).
-        /// TODO : quand ton modèle de génération sera prêt, le brancher ici.
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]

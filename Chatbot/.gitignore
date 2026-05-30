@@ -1,0 +1,4 @@
+echo Chatbot/chatbot-ui/node_modules >> .gitignore
+echo Chatbot/.env >> .gitignore
+echo **/__pycache__/ >> .gitignore
+echo *.pyc >> .gitignore

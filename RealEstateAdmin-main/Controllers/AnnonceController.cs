@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using RealEstateAdmin.Data;
 using RealEstateAdmin.Models;
 using System.Net.Http.Headers;
@@ -42,6 +43,21 @@ namespace RealEstateAdmin.Controllers
 
         // GET: Annonce/Wizard
         public IActionResult Wizard() => View();
+
+        // GET: Annonce/MesAnnonces
+        public async Task<IActionResult> MesAnnonces()
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return RedirectToAction("Login", "Account");
+
+            var annonces = await _db.Annonces
+                .Include(a => a.Photos)
+                .Where(a => a.UserId == currentUser.Id)
+                .OrderByDescending(a => a.CreatedAt)
+                .ToListAsync();
+
+            return View(annonces);
+        }
 
         // ─────────────────────────────────────────────────────────────────────
         // ML PROXY ENDPOINTS
@@ -131,7 +147,8 @@ namespace RealEstateAdmin.Controllers
         {
             var equipements = BuildEquipementsList(request);
             var description = BuildDescription(request.SurfaceM2, request.NbChambres,
-                                               request.Gouvernorat, request.Delegation, equipements);
+                                               request.Gouvernorat, request.Delegation,
+                                               request.NatureBien, request.EtatBien, equipements);
             return Json(new { description });
         }
 
@@ -201,17 +218,9 @@ namespace RealEstateAdmin.Controllers
         // ─────────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Validates the wizard payload and either:
-        ///   • Forwards to the external BienImmobilier API  (when ExternalBienApi:Enabled = true)
-        ///   • Falls back to saving locally in the Annonces table
-        ///
-        /// TODO — Intégration API externe :
-        ///   1. Dans appsettings.json, mettre ExternalBienApi:BaseUrl = "http://ton-projet/api"
-        ///      et ExternalBienApi:Enabled = true
-        ///   2. Le payload envoyé est identique à PublishAnnonceRequest (JSON camelCase)
-        ///   3. L'API externe doit renvoyer { "success": true, "id": number }
-        ///   4. Quand le modèle BienImmobilier est prêt dans l'autre projet,
-        ///      adapter les champs du payload ci-dessous à ses propriétés exactes.
+        /// Enregistre l'annonce localement (fallback) ou la transfère vers l'API externe
+        /// si ExternalBienApi:Enabled = true dans appsettings.json.
+        /// L'API externe doit renvoyer { "success": true, "id": number }.
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -239,31 +248,33 @@ namespace RealEstateAdmin.Controllers
                     var client = _httpClientFactory.CreateClient();
                     client.Timeout = TimeSpan.FromSeconds(15);
 
-                    // TODO: adapter le payload aux champs exacts de ton modèle externe
                     var payload = JsonSerializer.Serialize(new
                     {
-                        userId          = currentUser?.Id,
-                        gouvernorat     = request.Gouvernorat,
-                        delegation      = request.Delegation,
-                        surfaceM2       = request.SurfaceM2,
-                        nbChambres      = request.NbChambres,
-                        prixTnd         = request.PrixTnd,
-                        description     = request.Description,
-                        photos          = request.Photos,
-                        hasAscenseur    = request.HasAscenseur,
-                        hasBalcon       = request.HasBalcon,
+                        userId              = currentUser?.Id,
+                        titre               = request.Titre,
+                        gouvernorat         = request.Gouvernorat,
+                        delegation          = request.Delegation,
+                        surfaceM2           = request.SurfaceM2,
+                        nbChambres          = request.NbChambres,
+                        natureBien          = request.NatureBien,
+                        etatBien            = request.EtatBien,
+                        prixTnd             = request.PrixTnd,
+                        description         = request.Description,
+                        photos              = request.Photos,
+                        hasAscenseur        = request.HasAscenseur,
+                        hasBalcon           = request.HasBalcon,
                         hasChauffageCentral = request.HasChauffageCentral,
-                        hasClimatisation = request.HasClimatisation,
-                        hasGarage       = request.HasGarage,
-                        hasJardin       = request.HasJardin,
-                        hasParking      = request.HasParking,
-                        hasPiscine      = request.HasPiscine,
-                        hasTerrasse     = request.HasTerrasse
+                        hasClimatisation    = request.HasClimatisation,
+                        hasGarage           = request.HasGarage,
+                        hasJardin           = request.HasJardin,
+                        hasParking          = request.HasParking,
+                        hasPiscine          = request.HasPiscine,
+                        hasTerrasse         = request.HasTerrasse
                     }, _jsonOptions);
 
-                    // TODO: remplacer "/api/biens" par l'endpoint réel de ton projet externe
+                    var externalEndpoint = _configuration["ExternalBienApi:Endpoint"] ?? "/api/biens";
                     var response = await client.PostAsync(
-                        $"{externalBaseUrl}/api/biens",
+                        $"{externalBaseUrl}{externalEndpoint}",
                         new StringContent(payload, Encoding.UTF8, "application/json"));
 
                     if (response.IsSuccessStatusCode)
@@ -288,6 +299,9 @@ namespace RealEstateAdmin.Controllers
                 Delegation          = request.Delegation,
                 SurfaceM2           = request.SurfaceM2,
                 NbChambres          = request.NbChambres,
+                Titre               = request.Titre,
+                NatureBien          = request.NatureBien,
+                EtatBien            = request.EtatBien,
                 HasAscenseur        = request.HasAscenseur,
                 HasBalcon           = request.HasBalcon,
                 HasChauffageCentral = request.HasChauffageCentral,
@@ -332,19 +346,21 @@ namespace RealEstateAdmin.Controllers
         }
 
         private static string BuildDescription(int surface, int chambres, string gouvernorat,
-            string delegation, List<string> equipements)
+            string delegation, string? natureBien, string? etatBien, List<string> equipements)
         {
             var localisation = !string.IsNullOrWhiteSpace(delegation)
                 ? $"{delegation}, {gouvernorat}"
                 : gouvernorat;
 
-            var typeBien = surface switch
-            {
-                < 60  => "studio",
-                < 100 => "appartement",
-                < 250 => "appartement spacieux",
-                _     => "villa / maison"
-            };
+            var typeBien = !string.IsNullOrWhiteSpace(natureBien)
+                ? natureBien.ToLower()
+                : surface switch
+                {
+                    < 60  => "studio",
+                    < 100 => "appartement",
+                    < 250 => "appartement spacieux",
+                    _     => "villa / maison"
+                };
 
             var chambreStr = chambres switch
             {
@@ -363,13 +379,21 @@ namespace RealEstateAdmin.Controllers
                   $"offrant tout le confort nécessaire pour une vie quotidienne agréable."
                 : "Ce logement lumineux et bien agencé offre tout le confort nécessaire pour une vie quotidienne agréable.";
 
-            // Phrase 3 — équipements (si présents)
-            var p3 = equipements.Count > 0
-                ? $"Il bénéficie des équipements suivants : {string.Join(", ", equipements)}."
-                : string.Empty;
+            // Phrase 3 — état + équipements
+            var etatStr = etatBien switch
+            {
+                "Rénové"     => "entièrement rénové",
+                "Bon état"   => "en bon état",
+                "Etat moyen" => "à rafraîchir",
+                _            => null
+            };
+            var p3Parts = new List<string>();
+            if (etatStr != null) p3Parts.Add($"Bien {etatStr}");
+            if (equipements.Count > 0) p3Parts.Add($"il bénéficie des équipements suivants : {string.Join(", ", equipements)}");
+            var p3 = p3Parts.Count > 0 ? string.Join(", ", p3Parts) + "." : string.Empty;
 
             // Phrase 4 — accroche
-            var p4 = "Bien entretenu, situé dans un quartier calme et bien desservi — " +
+            var p4 = "Situé dans un quartier calme et bien desservi — " +
                      "une opportunité à saisir pour familles ou investisseurs.";
 
             return string.Join(" ", new[] { p1, p2, p3, p4 }

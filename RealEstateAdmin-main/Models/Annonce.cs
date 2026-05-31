@@ -42,11 +42,23 @@ namespace RealEstateAdmin.Models
         [Range(1, int.MaxValue, ErrorMessage = "Le prix doit être d'au moins 1 TND")]
         public int PrixTnd { get; set; }
 
+        [StringLength(200)]
+        public string? Titre { get; set; }
+
+        [StringLength(50)]
+        public string? NatureBien { get; set; }
+
+        [StringLength(50)]
+        public string? EtatBien { get; set; }
+
         // Meta
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         [StringLength(50)]
         public string Statut { get; set; } = "En attente";
+
+        // Lien vers le BienImmobilier créé lors de l'approbation
+        public int? BienImmobilierId { get; set; }
 
         public ICollection<AnnoncePhoto> Photos { get; set; } = new List<AnnoncePhoto>();
     }

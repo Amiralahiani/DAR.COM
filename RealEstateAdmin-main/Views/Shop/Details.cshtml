@@ -24,7 +24,6 @@
 
     <div class="row g-4">
 
-        {{*— Image —*}}
         <div class="col-lg-6">
             @if (!string.IsNullOrWhiteSpace(imageUrl))
             {
@@ -53,12 +52,10 @@
             }
         </div>
 
-        {{*— Infos + Actions —*}}
         <div class="col-lg-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body p-4">
 
-                    {{*— Prix —*}}
                     <div class="mb-3">
                         @if (hasDiscount)
                         {
@@ -73,7 +70,6 @@
                         }
                     </div>
 
-                    {{*— Badges statut —*}}
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         <span class="badge rounded-pill bg-dark-subtle text-dark">@Model.TypeTransaction</span>
                         <span class="badge rounded-pill @(Model.StatutCommercial == "Vendu" ? "bg-secondary" : Model.StatutCommercial == "Réservé" ? "bg-warning text-dark" : "bg-success")">
@@ -81,7 +77,6 @@
                         </span>
                     </div>
 
-                    {{*— Caractéristiques —*}}
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <div class="p-2 rounded-2 bg-light text-center">
@@ -112,7 +107,6 @@
                         <p class="text-muted small mb-3">@Model.Description</p>
                     }
 
-                    {{*— Actions —*}}
                     @if (canInterest)
                     {
                         <form asp-controller="Shop" asp-action="ExpressInterest" asp-route-id="@Model.Id"

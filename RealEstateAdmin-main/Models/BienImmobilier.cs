@@ -67,6 +67,41 @@ namespace RealEstateAdmin.Models
         [DataType(DataType.DateTime)]
         public DateTime? PublicationValidatedAt { get; set; }
 
+        [Display(Name = "Nature du bien")]
+        [StringLength(50)]
+        public string? NatureBien { get; set; }
+
+        [Display(Name = "État du bien")]
+        [StringLength(50)]
+        public string? EtatBien { get; set; }
+
+        [Display(Name = "Ascenseur")]
+        public bool HasAscenseur { get; set; } = false;
+
+        [Display(Name = "Balcon")]
+        public bool HasBalcon { get; set; } = false;
+
+        [Display(Name = "Chauffage central")]
+        public bool HasChauffageCentral { get; set; } = false;
+
+        [Display(Name = "Climatisation")]
+        public bool HasClimatisation { get; set; } = false;
+
+        [Display(Name = "Garage")]
+        public bool HasGarage { get; set; } = false;
+
+        [Display(Name = "Jardin")]
+        public bool HasJardin { get; set; } = false;
+
+        [Display(Name = "Parking")]
+        public bool HasParking { get; set; } = false;
+
+        [Display(Name = "Piscine")]
+        public bool HasPiscine { get; set; } = false;
+
+        [Display(Name = "Terrasse")]
+        public bool HasTerrasse { get; set; } = false;
+
         [NotMapped]
         [Display(Name = "Images (URLs multiples)")]
         public string? ImageUrlsInput { get; set; }

@@ -1,130 +1,188 @@
 @model RealEstateAdmin.Models.BienImmobilier
 
 @{
-    ViewData["Title"] = "Détails du bien";
+    ViewData["Title"] = Model.Titre;
+    var isAdmin      = User.IsInRole("Admin") || User.IsInRole("SuperAdmin");
+    var hasDiscount  = Model.DiscountPercent > 0;
+    var displayPrice = hasDiscount ? Model.Prix * (100 - Model.DiscountPercent) / 100m : Model.Prix;
+    var imageUrl     = !string.IsNullOrWhiteSpace(Model.ImageUrl)
+                       ? Model.ImageUrl
+                       : Model.Images?.FirstOrDefault()?.Url;
+
+    var (badgeIcon, badgeText, badgeClass) =
+        Model.StatutCommercial == "Vendu"             ? ("bi-check-circle-fill", "Vendu",                "bg-secondary") :
+        Model.StatutCommercial == "En cours de vente" ? ("bi-arrow-repeat",      "Vente en cours",       "bg-info text-dark") :
+        Model.StatutCommercial == "Réservé"           ? ("bi-hourglass-split",   "Réservé",              "bg-warning text-dark") :
+        Model.PublicationStatus == "Refusé"           ? ("bi-eye-slash-fill",    "Non publié",           "bg-danger") :
+        Model.PublicationStatus == "En attente"       ? ("bi-clock-fill",        "En attente validation","bg-warning text-dark") :
+        Model.PublicationStatus == "Publié"           ? ("bi-eye-fill",          "Publié · Disponible",  "bg-success") :
+                                                        ("bi-circle",            Model.PublicationStatus,"bg-secondary");
 }
 
-<div class="container">
-    <h1 class="mb-4 text-gradient">
-        <i class="bi bi-house-door"></i> Détails du bien
-    </h1>
+<div class="container py-4">
 
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            @if (!string.IsNullOrEmpty(Model.ImageUrl))
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour à la liste
+        </a>
+        <h1 class="mb-0 fs-4 fw-bold text-gradient">@Model.Titre</h1>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Image + galerie -->
+        <div class="col-lg-6">
+            @if (!string.IsNullOrWhiteSpace(imageUrl))
             {
-                <div class="card">
-                    <img src="@Model.ImageUrl" alt="@Model.Titre" class="card-img-top detail-main-image" />
-                </div>
+                <img src="@imageUrl" alt="@Model.Titre"
+                     class="img-fluid rounded-3 shadow w-100"
+                     style="max-height:420px;object-fit:cover;" />
             }
             else
             {
-                <div class="card">
-                    <div class="property-image property-image-tall">
-                        <i class="bi bi-house-heart property-empty-icon-large"></i>
-                    </div>
+                <div class="d-flex align-items-center justify-content-center bg-secondary bg-opacity-10 rounded-3"
+                     style="height:320px;">
+                    <i class="bi bi-image fs-1 text-muted"></i>
+                </div>
+            }
+
+            @if (Model.Images != null && Model.Images.Count > 1)
+            {
+                <div class="d-flex gap-2 mt-2 flex-wrap">
+                    @foreach (var img in Model.Images.Skip(1).Take(5))
+                    {
+                        <img src="@img.Url" alt="photo"
+                             class="rounded-2 border"
+                             style="height:72px;width:100px;object-fit:cover;" />
+                    }
                 </div>
             }
         </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-body">
-                    <h2 class="card-title mb-4">@Html.DisplayFor(model => model.Titre)</h2>
-                    
-                    <div class="property-price mb-4">
-                        @Model.Prix.ToString("N2") DT
+
+        <!-- Infos + actions admin -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+
+                    <!-- Prix -->
+                    <div class="mb-3">
+                        @if (hasDiscount)
+                        {
+                            <div class="text-muted text-decoration-line-through small">@Model.Prix.ToString("N0") DT</div>
+                        }
+                        <div class="fs-2 fw-bold @(hasDiscount ? "text-danger" : "")"
+                             style="@(hasDiscount ? "" : "color:#d6a547;")">
+                            @displayPrice.ToString("N0") DT
+                        </div>
+                        @if (hasDiscount)
+                        {
+                            <span class="badge bg-danger">-@Model.DiscountPercent% de réduction</span>
+                        }
                     </div>
 
-                    <dl class="row mb-4">
-                        @if (!string.IsNullOrEmpty(Model.Description))
+                    <!-- Statut unique cohérent -->
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge @badgeClass rounded-pill px-3 py-2 fs-6">
+                            <i class="bi @badgeIcon me-1"></i>@badgeText
+                        </span>
+                        @if (!string.IsNullOrWhiteSpace(Model.NatureBien))
                         {
-                            <dt class="col-sm-4">Description</dt>
-                            <dd class="col-sm-8">@Html.DisplayFor(model => model.Description)</dd>
+                            <span class="badge bg-primary rounded-pill">@Model.NatureBien</span>
                         }
-                        
-                        @if (!string.IsNullOrEmpty(Model.Adresse))
+                        @if (!string.IsNullOrWhiteSpace(Model.EtatBien))
                         {
-                            <dt class="col-sm-4">
-                                <i class="bi bi-geo-alt"></i> Adresse
-                            </dt>
-                            <dd class="col-sm-8">@Html.DisplayFor(model => model.Adresse)</dd>
+                            <span class="badge bg-secondary rounded-pill">@Model.EtatBien</span>
                         }
-                        
+                    </div>
+
+                    <!-- Caractéristiques -->
+                    <div class="row g-2 mb-3">
                         @if (Model.Surface.HasValue)
                         {
-                            <dt class="col-sm-4">
-                                <i class="bi bi-rulers"></i> Surface
-                            </dt>
-                            <dd class="col-sm-8">@Html.DisplayFor(model => model.Surface) m²</dd>
+                            <div class="col-6">
+                                <div class="p-2 rounded-2 bg-light text-center">
+                                    <i class="bi bi-aspect-ratio text-primary"></i>
+                                    <div class="fw-bold">@Model.Surface m²</div>
+                                    <small class="text-muted">Surface</small>
+                                </div>
+                            </div>
                         }
-                        
                         @if (Model.NombrePieces.HasValue)
                         {
-                            <dt class="col-sm-4">
-                                <i class="bi bi-door-open"></i> Pièces
-                            </dt>
-                            <dd class="col-sm-8">@Html.DisplayFor(model => model.NombrePieces)</dd>
-                        }
-
-                        <dt class="col-sm-4">
-                            <i class="bi bi-tags"></i> Type
-                        </dt>
-                        <dd class="col-sm-8">@Model.TypeTransaction</dd>
-
-                        <dt class="col-sm-4">
-                            <i class="bi bi-activity"></i> Statut commercial
-                        </dt>
-                        <dd class="col-sm-8">@Model.StatutCommercial</dd>
-
-                        <dt class="col-sm-4">
-                            <i class="bi bi-flag"></i> Publication
-                        </dt>
-                        <dd class="col-sm-8">@Model.PublicationStatus</dd>
-                    </dl>
-
-                    <div class="mt-4">
-                        @if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
-                        {
-                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning me-2">
-                                <i class="bi bi-pencil"></i> Modifier
-                            </a>
-                        }
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <a asp-action="Index" class="btn btn-secondary">
-                                <i class="bi bi-arrow-left"></i> Retour à la liste
-                            </a>
-                        }
-                        else
-                        {
-                            <a asp-controller="Shop" asp-action="Index" class="btn btn-secondary">
-                                <i class="bi bi-arrow-left"></i> Retour au shop
-                            </a>
+                            <div class="col-6">
+                                <div class="p-2 rounded-2 bg-light text-center">
+                                    <i class="bi bi-door-closed text-primary"></i>
+                                    <div class="fw-bold">@Model.NombrePieces</div>
+                                    <small class="text-muted">Pièces</small>
+                                </div>
+                            </div>
                         }
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    @if (Model.Images != null && Model.Images.Any())
-    {
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="bi bi-images"></i> Galerie
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    @foreach (var img in Model.Images)
+                    @if (!string.IsNullOrWhiteSpace(Model.Adresse))
                     {
-                        <div class="col-md-4">
-                            <img src="@img.Url" alt="Image bien" class="img-fluid rounded" />
+                        <p class="text-muted mb-2">
+                            <i class="bi bi-geo-alt"></i> @Model.Adresse
+                        </p>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(Model.Description))
+                    {
+                        <p class="text-muted small mb-3">@Model.Description</p>
+                    }
+
+                    <!-- Équipements -->
+                    @{
+                        var equips = new List<(bool has, string icon, string label)> {
+                            (Model.HasAscenseur,      "bi-elevator",       "Ascenseur"),
+                            (Model.HasBalcon,         "bi-grid-3x3-gap",   "Balcon"),
+                            (Model.HasPiscine,        "bi-water",          "Piscine"),
+                            (Model.HasJardin,         "bi-tree",           "Jardin"),
+                            (Model.HasGarage,         "bi-car-front",      "Garage"),
+                            (Model.HasParking,        "bi-p-square",       "Parking"),
+                            (Model.HasTerrasse,       "bi-door-open",      "Terrasse"),
+                            (Model.HasClimatisation,  "bi-wind",           "Clim"),
+                            (Model.HasChauffageCentral,"bi-thermometer-sun","Chauffage"),
+                        };
+                        var activeEquips = equips.Where(e => e.has).ToList();
+                    }
+                    @if (activeEquips.Any())
+                    {
+                        <div class="d-flex flex-wrap gap-1 mb-3">
+                            @foreach (var (_, icon, label) in activeEquips)
+                            {
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi @icon me-1"></i>@label
+                                </span>
+                            }
                         </div>
                     }
+
+                    @if (Model.User != null)
+                    {
+                        <p class="text-muted small mb-3">
+                            <i class="bi bi-person-circle me-1"></i>
+                            Propriétaire : <strong>@(Model.User.Nom ?? Model.User.UserName)</strong>
+                        </p>
+                    }
+
+                    <!-- Actions admin -->
+                    @if (isAdmin)
+                    {
+                        <div class="d-grid gap-2">
+                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                                <i class="bi bi-pencil"></i> Modifier ce bien
+                            </a>
+                            <a asp-controller="Shop" asp-action="Details" asp-route-id="@Model.Id"
+                               class="btn btn-outline-primary" target="_blank">
+                                <i class="bi bi-shop"></i> Voir comme client
+                            </a>
+                        </div>
+                    }
+
                 </div>
             </div>
         </div>
-    }
+
+    </div>
 </div>

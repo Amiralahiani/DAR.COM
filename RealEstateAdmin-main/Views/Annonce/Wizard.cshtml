@@ -84,6 +84,47 @@
                         <span class="wz-error" id="err-delegation"></span>
                     </div>
 
+                    <!-- Titre -->
+                    <div class="mb-4">
+                        <label class="wz-label" for="titre">Titre de l'annonce</label>
+                        <input type="text" class="wz-input" id="titre"
+                               placeholder="Ex : Villa moderne avec piscine à La Marsa" maxlength="200" />
+                        <small class="text-muted">Laissez vide pour un titre généré automatiquement.</small>
+                    </div>
+
+                    <!-- Nature + État -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-sm-6">
+                            <label class="wz-label" for="natureBien">Nature du bien</label>
+                            <select class="wz-select" id="natureBien">
+                                <option value="">-- Sélectionnez --</option>
+                                <option>Appartement</option>
+                                <option>Autre</option>
+                                <option>Bureau</option>
+                                <option>Duplex</option>
+                                <option>Ferme</option>
+                                <option>Garage</option>
+                                <option>Immeuble</option>
+                                <option>Local commercial</option>
+                                <option>Quadruplex</option>
+                                <option>Studio</option>
+                                <option>Triplex</option>
+                                <option>Villa/Maison</option>
+                            </select>
+                            <span class="wz-error" id="err-natureBien"></span>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="wz-label" for="etatBien">État du bien</label>
+                            <select class="wz-select" id="etatBien">
+                                <option value="">-- Sélectionnez --</option>
+                                <option>Etat moyen</option>
+                                <option>Bon état</option>
+                                <option>Rénové</option>
+                            </select>
+                            <span class="wz-error" id="err-etatBien"></span>
+                        </div>
+                    </div>
+
                     <!-- Surface + Chambres -->
                     <div class="row g-4 mb-4">
                         <div class="col-sm-6">
@@ -303,9 +344,9 @@
         <div class="wz-publish-success d-none" id="publishSuccess">
             <i class="bi bi-check-circle-fill"></i>
             <h3>Annonce publiée !</h3>
-            <p>Votre bien a été soumis avec succès.</p>
-            <a asp-controller="BienImmobilier" asp-action="Index" class="btn wz-btn-go">
-                Voir mes biens
+            <p>Votre bien a été soumis avec succès. Notre équipe va le vérifier avant publication.</p>
+            <a asp-controller="Annonce" asp-action="MesAnnonces" class="btn wz-btn-go">
+                Voir mes annonces
             </a>
         </div>
         <div class="wz-publish-error d-none" id="publishErrorCard">

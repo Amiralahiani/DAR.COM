@@ -9,204 +9,269 @@
         </h1>
     </div>
 
-    <!-- KPIs -->
-    <div class="mb-4">
-        <h2 class="mb-3">Statistiques essentielles</h2>
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="stat-card primary">
-                    <div class="mb-3">
-                        <i class="bi bi-house-heart icon-stat-xl icon-gold"></i>
+    <!-- KPIs globaux — admin seulement -->
+    @if (ViewBag.IsAdmin == true)
+    {
+        <div class="mb-4">
+            <h2 class="mb-3">Statistiques essentielles</h2>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="stat-card primary">
+                        <div class="mb-3"><i class="bi bi-house-heart icon-stat-xl icon-gold"></i></div>
+                        <h2 class="stat-number">@ViewBag.TotalBiens</h2>
+                        <p class="stat-label">Total des biens</p>
                     </div>
-                    <h2 class="stat-number">@ViewBag.TotalBiens</h2>
-                    <p class="stat-label">@(ViewBag.IsAdmin == true ? "Total des biens" : "Mes biens")</p>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stat-card success">
-                    <div class="mb-3">
-                        <i class="bi bi-cash-coin icon-stat-xl icon-emerald"></i>
+                <div class="col-md-4">
+                    <div class="stat-card success">
+                        <div class="mb-3"><i class="bi bi-cash-coin icon-stat-xl icon-emerald"></i></div>
+                        <h2 class="stat-number">@ViewBag.AvgPrice</h2>
+                        <p class="stat-label">Prix moyen</p>
                     </div>
-                    <h2 class="stat-number">@ViewBag.AvgPrice</h2>
-                    <p class="stat-label">Prix moyen</p>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stat-card warning">
-                    <div class="mb-3">
-                        <i class="bi bi-aspect-ratio icon-stat-xl icon-terracotta"></i>
+                <div class="col-md-4">
+                    <div class="stat-card warning">
+                        <div class="mb-3"><i class="bi bi-aspect-ratio icon-stat-xl icon-terracotta"></i></div>
+                        <h2 class="stat-number">@ViewBag.AvgPricePerM2</h2>
+                        <p class="stat-label">Prix moyen / m²</p>
                     </div>
-                    <h2 class="stat-number">@ViewBag.AvgPricePerM2</h2>
-                    <p class="stat-label">Prix moyen / m²</p>
                 </div>
             </div>
         </div>
-    </div>
+    }
 
     @if (ViewBag.IsAdmin == true)
     {
+        <!-- KPIs admin -->
         <div class="mb-4">
             <h2 class="mb-3">KPIs ventes</h2>
             <div class="row g-4">
                 <div class="col-md-3">
                     <div class="stat-card primary">
-                        <div class="mb-3">
-                            <i class="bi bi-receipt-cutoff icon-stat-lg"></i>
-                        </div>
+                        <div class="mb-3"><i class="bi bi-receipt-cutoff icon-stat-lg"></i></div>
                         <h2 class="stat-number">@ViewBag.TotalTransactions</h2>
                         <p class="stat-label">Transactions</p>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="stat-card success">
-                        <div class="mb-3">
-                            <i class="bi bi-currency-dollar icon-stat-lg"></i>
-                        </div>
+                        <div class="mb-3"><i class="bi bi-currency-dollar icon-stat-lg"></i></div>
                         <h2 class="stat-number">@ViewBag.TotalRevenue</h2>
                         <p class="stat-label">Revenus</p>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="stat-card warning">
-                        <div class="mb-3">
-                            <i class="bi bi-graph-up-arrow icon-stat-lg"></i>
-                        </div>
+                        <div class="mb-3"><i class="bi bi-graph-up-arrow icon-stat-lg"></i></div>
                         <h2 class="stat-number">@ViewBag.ConversionRate</h2>
                         <p class="stat-label">Taux de conversion</p>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="stat-card primary">
-                        <div class="mb-3">
-                            <i class="bi bi-check2-circle icon-stat-lg"></i>
-                        </div>
+                        <div class="mb-3"><i class="bi bi-check2-circle icon-stat-lg"></i></div>
                         <h2 class="stat-number">@ViewBag.PaidTransactions</h2>
                         <p class="stat-label">Paiements validés</p>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Graphiques admin -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="chart-shell h-100">
+                    <div class="chart-header">
+                        <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Répartition par gamme de prix</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="prixChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="chart-shell h-100">
+                    <div class="chart-header">
+                        <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Top zones</h5>
+                        <span class="chart-note">@ViewBag.ZoneCount zones détectées</span>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="zoneChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table zones admin -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-ul"></i> Statistiques par zone</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr><th>Zone</th><th>Biens</th><th>Prix moyen (DT)</th><th>Prix/m² (DT)</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var zone in (IEnumerable<dynamic>)ViewBag.ZoneStats)
+                            {
+                                <tr>
+                                    <td>@zone.Zone</td>
+                                    <td>@zone.Count</td>
+                                    <td>@zone.AvgPrice.ToString("N0")</td>
+                                    <td>@(((double)zone.AvgPricePerM2).ToString("N0"))</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     }
     else
     {
+        <!-- Mon activité — même style que l'original -->
         <div class="mb-4">
             <h2 class="mb-3">Mon activité</h2>
             <div class="row g-4">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="stat-card primary">
-                        <h2 class="stat-number">@ViewBag.MySales</h2>
-                        <p class="stat-label">Biens vendus</p>
+                        <div class="mb-3"><i class="bi bi-megaphone icon-stat-xl icon-gold"></i></div>
+                        <h2 class="stat-number">@((int)(ViewBag.AnnoncesEnAttente ?? 0) + (int)(ViewBag.AnnoncesApprouvees ?? 0) + (int)(ViewBag.AnnoncesRefusees ?? 0))</h2>
+                        <p class="stat-label">Mes annonces</p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="stat-card success">
+                        <div class="mb-3"><i class="bi bi-calendar-check icon-stat-xl icon-emerald"></i></div>
+                        <h2 class="stat-number">@((int)(ViewBag.DemandesEnAttente ?? 0) + (int)(ViewBag.DemandesAcceptees ?? 0) + (int)(ViewBag.DemandesRefusees ?? 0))</h2>
+                        <p class="stat-label">Visites & RDV</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card warning">
+                        <div class="mb-3"><i class="bi bi-house-heart icon-stat-xl icon-terracotta"></i></div>
                         <h2 class="stat-number">@ViewBag.MyPurchases</h2>
                         <p class="stat-label">Biens achetés</p>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="stat-card warning">
+                <div class="col-md-3">
+                    <div class="stat-card primary">
+                        <div class="mb-3"><i class="bi bi-cash-coin icon-stat-xl"></i></div>
                         <h2 class="stat-number">@ViewBag.MyTransactionAmount</h2>
                         <p class="stat-label">Total transactions</p>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Mes annonces -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header card-header-gradient-ink d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-white"><i class="bi bi-megaphone"></i> Mes annonces</h5>
+                        <a asp-controller="Annonce" asp-action="MesAnnonces" class="btn btn-sm btn-outline-light">Voir tout</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Bien</th>
+                                        <th>Prix</th>
+                                        <th>Surface</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (ViewBag.ClientAnnonces != null)
+                                    {
+                                        @foreach (var a in (IEnumerable<dynamic>)ViewBag.ClientAnnonces)
+                                        {
+                                            var statut = (string)a.Statut;
+                                            var badgeCl = statut == "Approuvée" ? "bg-success" : statut == "Refusée" ? "bg-danger" : "bg-warning text-dark";
+                                            <tr>
+                                                <td class="fw-semibold small">@(string.IsNullOrWhiteSpace((string)a.NatureBien) ? "Bien" : (string)a.NatureBien) — @a.Delegation</td>
+                                                <td class="small">@((int)a.PrixTnd) DT</td>
+                                                <td class="small">@a.SurfaceM2 m²</td>
+                                                <td><span class="badge @badgeCl">@statut</span></td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr><td colspan="4" class="text-muted text-center py-3">Aucune annonce</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer text-end">
+                        <a asp-controller="Annonce" asp-action="Wizard" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-circle"></i> Publier un bien
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mes visites & RDV -->
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header card-header-gradient-ink d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-white"><i class="bi bi-calendar2-check"></i> Mes visites & RDV</h5>
+                        <a asp-controller="MesDemandes" asp-action="Index" class="btn btn-sm btn-outline-light">Voir tout</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Bien</th>
+                                        <th>Type</th>
+                                        <th>Créneau</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (ViewBag.ClientDemandes != null)
+                                    {
+                                        @foreach (var d in (IEnumerable<dynamic>)ViewBag.ClientDemandes)
+                                        {
+                                            var st = (string)d.Statut;
+                                            var bc = st == "Accepté" ? "bg-success" : st == "Refusé" ? "bg-danger" : "bg-warning text-dark";
+                                            var type = (string)d.Type == "VISITE" ? "Visite" : "RDV agent";
+                                            <tr>
+                                                <td class="small fw-semibold">@d.BienTitre</td>
+                                                <td class="small">@type</td>
+                                                <td class="small">@d.SlotStr</td>
+                                                <td><span class="badge @bc">@st</span></td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr><td colspan="4" class="text-muted text-center py-3">Aucune demande</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer text-end">
+                        <a asp-controller="Shop" asp-action="Index" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-shop"></i> Voir le shop
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     }
-
-    <div class="row g-4 mb-4">
-        <div class="col-lg-6">
-            <div class="chart-shell h-100">
-                <div class="chart-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-bar-chart"></i> Répartition des biens par gamme de prix
-                    </h5>
-                    <span class="chart-note">Tranches dynamiques selon vos données</span>
-                </div>
-                <div class="card-body">
-                    <canvas id="prixChart" width="400" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="chart-shell h-100">
-                <div class="chart-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-geo-alt"></i> Top zones (nombre de biens)
-                    </h5>
-                    <span class="chart-note">Zones détectées : @ViewBag.ZoneCount</span>
-                </div>
-                <div class="card-body">
-                    <canvas id="zoneChart" width="400" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <h2 class="mb-3">Détails par zone</h2>
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">
-                <i class="bi bi-list-ul"></i> Statistiques par zone
-            </h5>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table mb-0">
-                    <thead>
-                        <tr>
-                            <th>Zone</th>
-                            <th>Biens</th>
-                            <th>Prix moyen (DT)</th>
-                            <th>Prix/m² (DT)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var zone in (IEnumerable<dynamic>)ViewBag.ZoneStats)
-                        {
-                            <tr>
-                                <td>@zone.Zone</td>
-                                <td>@zone.Count</td>
-                                <td>@zone.AvgPrice.ToString("N0")</td>
-                                <td>@(((double)zone.AvgPricePerM2).ToString("N0"))</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-4 mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-info-circle"></i> Informations
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <p class="mb-3">
-                        <strong>Bienvenue sur votre tableau de bord !</strong>
-                    </p>
-                    <p class="text-muted mb-0">
-                        @if (ViewBag.IsAdmin == true)
-                        {
-                            <text>Gérez efficacement tous les biens immobiliers, suivez les statistiques globales et restez organisé avec notre plateforme moderne.</text>
-                        }
-                        else
-                        {
-                            <text>Gérez efficacement vos biens immobiliers personnels, suivez vos statistiques et restez organisé avec notre plateforme moderne.</text>
-                        }
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 @section Scripts {
     <script>
+    if (document.getElementById('prixChart')) {
         const ctx = document.getElementById('prixChart').getContext('2d');
         const biensParPrix = @Html.Raw(Json.Serialize(ViewBag.BiensParPrix));
         
@@ -309,6 +374,6 @@
                 }
             }
         });
-
+    } // fin if prixChart
     </script>
 }

@@ -1,186 +1,254 @@
 @model RealEstateAdmin.Models.BienImmobilier
 
 @{
-    ViewData["Title"] = "Modifier le bien immobilier";
+    ViewData["Title"] = "Modifier le bien";
 }
 
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="text-gradient">
-            <i class="bi bi-pencil-square"></i> Modifier le bien immobilier
+            <i class="bi bi-pencil-square"></i> Modifier le bien
         </h1>
         <a asp-action="Index" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Retour à la liste
         </a>
     </div>
 
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="card">
-                <div class="card-header card-header-gradient-ink">
-                    <h5 class="mb-0">
-                        <i class="bi bi-house-gear"></i> Informations du bien
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form asp-action="Edit">
-                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
-                        <input type="hidden" asp-for="Id" />
+    <form asp-action="Edit">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        <input type="hidden" asp-for="Id" />
 
-                        <div class="mb-4">
-                            <label asp-for="Titre" class="form-label fw-semibold">
-                                <i class="bi bi-tag"></i> @Html.DisplayNameFor(m => m.Titre)
-                            </label>
+        <div class="row g-4">
+
+            <!-- Colonne principale -->
+            <div class="col-lg-8">
+
+                <!-- Identification -->
+                <div class="card mb-4">
+                    <div class="card-header card-header-gradient-ink">
+                        <h5 class="mb-0"><i class="bi bi-house-gear"></i> Identification</h5>
+                    </div>
+                    <div class="card-body">
+
+                        <div class="mb-3">
+                            <label asp-for="Titre" class="form-label fw-semibold"></label>
                             <input asp-for="Titre" class="form-control form-control-lg" />
                             <span asp-validation-for="Titre" class="text-danger small"></span>
                         </div>
 
-                        <div class="mb-4">
-                            <label asp-for="Description" class="form-label fw-semibold">
-                                <i class="bi bi-file-text"></i> @Html.DisplayNameFor(m => m.Description)
-                            </label>
-                            <textarea asp-for="Description" class="form-control" rows="6"></textarea>
-                            <span asp-validation-for="Description" class="text-danger small"></span>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="NatureBien" class="form-label fw-semibold">Nature du bien</label>
+                                <select asp-for="NatureBien" class="form-select">
+                                    <option value="">-- Sélectionnez --</option>
+                                    <option>Appartement</option>
+                                    <option>Autre</option>
+                                    <option>Bureau</option>
+                                    <option>Duplex</option>
+                                    <option>Ferme</option>
+                                    <option>Garage</option>
+                                    <option>Immeuble</option>
+                                    <option>Local commercial</option>
+                                    <option>Quadruplex</option>
+                                    <option>Studio</option>
+                                    <option>Triplex</option>
+                                    <option>Villa/Maison</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="EtatBien" class="form-label fw-semibold">État du bien</label>
+                                <select asp-for="EtatBien" class="form-select">
+                                    <option value="">-- Sélectionnez --</option>
+                                    <option>Etat moyen</option>
+                                    <option>Bon état</option>
+                                    <option>Rénové</option>
+                                </select>
+                            </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-4">
-                                <label asp-for="TypeTransaction" class="form-label fw-semibold">
-                                    <i class="bi bi-tag-fill"></i> @Html.DisplayNameFor(m => m.TypeTransaction)
-                                </label>
+                    </div>
+                </div>
+
+                <!-- Localisation & Prix -->
+                <div class="card mb-4">
+                    <div class="card-header card-header-gradient-ink">
+                        <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Localisation & Prix</h5>
+                    </div>
+                    <div class="card-body">
+
+                        <div class="mb-3">
+                            <label asp-for="Adresse" class="form-label fw-semibold"></label>
+                            <input asp-for="Adresse" class="form-control" />
+                            <span asp-validation-for="Adresse" class="text-danger small"></span>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label asp-for="Prix" class="form-label fw-semibold"></label>
+                                <div class="input-group">
+                                    <input asp-for="Prix" class="form-control" type="number" step="0.01" min="0" />
+                                    <span class="input-group-text">DT</span>
+                                </div>
+                                <span asp-validation-for="Prix" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="Surface" class="form-label fw-semibold"></label>
+                                <div class="input-group">
+                                    <input asp-for="Surface" class="form-control" type="number" min="0" />
+                                    <span class="input-group-text">m²</span>
+                                </div>
+                                <span asp-validation-for="Surface" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="NombrePieces" class="form-label fw-semibold"></label>
+                                <input asp-for="NombrePieces" class="form-control" type="number" min="0" />
+                                <span asp-validation-for="NombrePieces" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="card mb-4">
+                    <div class="card-header card-header-gradient-ink">
+                        <h5 class="mb-0"><i class="bi bi-file-text"></i> Description</h5>
+                    </div>
+                    <div class="card-body">
+                        <textarea asp-for="Description" class="form-control" rows="5"
+                                  placeholder="Décrivez le bien…"></textarea>
+                        <span asp-validation-for="Description" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <!-- Équipements -->
+                <div class="card mb-4">
+                    <div class="card-header card-header-gradient-ink">
+                        <h5 class="mb-0"><i class="bi bi-toggles"></i> Équipements</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            @foreach (var (field, label, icon) in new[] {
+                                ("HasAscenseur",      "Ascenseur",       "bi-arrow-up-square"),
+                                ("HasBalcon",         "Balcon",          "bi-grid-3x3-gap"),
+                                ("HasChauffageCentral","Chauffage central","bi-thermometer-sun"),
+                                ("HasClimatisation",  "Climatisation",   "bi-wind"),
+                                ("HasGarage",         "Garage",          "bi-car-front"),
+                                ("HasJardin",         "Jardin",          "bi-tree"),
+                                ("HasParking",        "Parking",         "bi-p-square"),
+                                ("HasPiscine",        "Piscine",         "bi-water"),
+                                ("HasTerrasse",       "Terrasse",        "bi-door-open"),
+                            })
+                            {
+                                <div class="col-6 col-md-4">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox"
+                                               id="@field" name="@field" value="true"
+                                               @(((bool)(typeof(RealEstateAdmin.Models.BienImmobilier).GetProperty(field)?.GetValue(Model) ?? false) ? "checked" : "")) />
+                                        <input type="hidden" name="@field" value="false" />
+                                        <label class="form-check-label" for="@field">
+                                            <i class="bi @icon me-1"></i>@label
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Images -->
+                <div class="card mb-4">
+                    <div class="card-header card-header-gradient-ink">
+                        <h5 class="mb-0"><i class="bi bi-images"></i> Images</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="ImageUrl" class="form-label fw-semibold">Image principale (URL)</label>
+                            <input asp-for="ImageUrl" class="form-control" type="url"
+                                   placeholder="https://exemple.com/image.jpg" />
+                            <span asp-validation-for="ImageUrl" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-0">
+                            <label asp-for="ImageUrlsInput" class="form-label fw-semibold">Galerie (une URL par ligne)</label>
+                            <textarea asp-for="ImageUrlsInput" class="form-control" rows="3"
+                                      placeholder="https://exemple.com/photo1.jpg&#10;https://exemple.com/photo2.jpg"></textarea>
+                            <small class="form-text text-muted">Remplace la galerie existante si renseigné.</small>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Colonne droite : statuts admin -->
+            <div class="col-lg-4">
+
+                @if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
+                {
+                    <div class="card mb-4">
+                        <div class="card-header card-header-gradient-ink">
+                            <h5 class="mb-0"><i class="bi bi-shield-check"></i> Statuts (Admin)</h5>
+                        </div>
+                        <div class="card-body">
+
+                            <div class="mb-3">
+                                <label asp-for="PublicationStatus" class="form-label fw-semibold">Publication</label>
+                                <select asp-for="PublicationStatus" class="form-select">
+                                    <option value="En attente">En attente</option>
+                                    <option value="Publié">Publié</option>
+                                    <option value="Refusé">Refusé</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label asp-for="StatutCommercial" class="form-label fw-semibold">Statut commercial</label>
+                                <select asp-for="StatutCommercial" class="form-select">
+                                    <option value="Disponible">Disponible</option>
+                                    <option value="Réservé">Réservé</option>
+                                    <option value="En cours de vente">En cours de vente</option>
+                                    <option value="Vendu">Vendu</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label asp-for="TypeTransaction" class="form-label fw-semibold">Type de transaction</label>
                                 <select asp-for="TypeTransaction" class="form-select">
                                     <option value="A Vendre">A Vendre</option>
                                     <option value="A Louer">A Louer</option>
                                     <option value="Acheté">Acheté</option>
                                 </select>
-                                <span asp-validation-for="TypeTransaction" class="text-danger small"></span>
                             </div>
-                            <div class="col-md-6 mb-4">
-                                <label asp-for="Prix" class="form-label fw-semibold">
-                                    <i class="bi bi-currency-exchange"></i> @Html.DisplayNameFor(m => m.Prix)
-                                </label>
-                                <div class="input-group">
-                                    <input asp-for="Prix" class="form-control" type="number" step="0.01" />
-                                    <span class="input-group-text">DT</span>
-                                </div>
-                                <span asp-validation-for="Prix" class="text-danger small"></span>
-                            </div>
-                        </div>
 
-                        <div class="mb-4">
-                            <label asp-for="Adresse" class="form-label fw-semibold">
-                                <i class="bi bi-geo-alt"></i> @Html.DisplayNameFor(m => m.Adresse)
-                            </label>
-                            <input asp-for="Adresse" class="form-control" />
-                            <span asp-validation-for="Adresse" class="text-danger small"></span>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-4">
-                                <label asp-for="Surface" class="form-label fw-semibold">
-                                    <i class="bi bi-rulers"></i> @Html.DisplayNameFor(m => m.Surface)
-                                </label>
-                                <input asp-for="Surface" class="form-control" type="number" />
-                                <span asp-validation-for="Surface" class="text-danger small"></span>
-                            </div>
-                            <div class="col-md-6 mb-4">
-                                <label asp-for="NombrePieces" class="form-label fw-semibold">
-                                    <i class="bi bi-door-open"></i> @Html.DisplayNameFor(m => m.NombrePieces)
-                                </label>
-                                <input asp-for="NombrePieces" class="form-control" type="number" />
-                                <span asp-validation-for="NombrePieces" class="text-danger small"></span>
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label asp-for="ImageUrl" class="form-label fw-semibold">
-                                <i class="bi bi-image"></i> @Html.DisplayNameFor(m => m.ImageUrl)
-                            </label>
-                            <input asp-for="ImageUrl" class="form-control" type="url" placeholder="https://exemple.com/image.jpg" />
-                            <span asp-validation-for="ImageUrl" class="text-danger small"></span>
-                            <small class="form-text text-muted">Image principale.</small>
-                        </div>
-
-                        <div class="mb-4">
-                            <label asp-for="ImageUrlsInput" class="form-label fw-semibold">
-                                <i class="bi bi-images"></i> @Html.DisplayNameFor(m => m.ImageUrlsInput)
-                            </label>
-                            <textarea asp-for="ImageUrlsInput" class="form-control" rows="3" placeholder="Une URL par ligne"></textarea>
-                            <small class="form-text text-muted">Remplace la galerie existante si renseigné.</small>
-                        </div>
-
-                        @if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
-                        {
-                            <div class="mb-4">
-                                <label asp-for="PublicationStatus" class="form-label fw-semibold">
-                                    <i class="bi bi-flag"></i> @Html.DisplayNameFor(m => m.PublicationStatus)
-                                </label>
-                                <select asp-for="PublicationStatus" class="form-select">
-                                    <option>En attente</option>
-                                    <option>Publié</option>
-                                    <option>Refusé</option>
-                                </select>
-                            </div>
-                            <div class="mb-4">
-                                <label asp-for="StatutCommercial" class="form-label fw-semibold">
-                                    <i class="bi bi-activity"></i> @Html.DisplayNameFor(m => m.StatutCommercial)
-                                </label>
-                                <select asp-for="StatutCommercial" class="form-select">
-                                    <option value="Disponible">Disponible</option>
-                                    <option value="Réservé">Réservé</option>
-                                    <option value="Vendu">Vendu</option>
-                                </select>
-                            </div>
-                            <div class="mb-4">
+                            <div class="mb-0">
                                 <label asp-for="DiscountPercent" class="form-label fw-semibold">
-                                    <i class="bi bi-percent"></i> @Html.DisplayNameFor(m => m.DiscountPercent)
+                                    Réduction (%)
                                 </label>
                                 <div class="input-group">
-                                    <input asp-for="DiscountPercent" class="form-control" type="number" step="0.01" min="0" max="100" />
+                                    <input asp-for="DiscountPercent" class="form-control" type="number" min="0" max="100" />
                                     <span class="input-group-text">%</span>
                                 </div>
-                                <small class="form-text text-muted">Si &gt; 0, le bien sera affiché comme en solde.</small>
+                                <small class="form-text text-muted">0 = pas de solde</small>
                             </div>
-                        }
 
-                        <div class="d-flex gap-2 mt-3">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle"></i> Enregistrer
-                            </button>
-                            <a asp-action="Index" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-circle"></i> Annuler
-                            </a>
                         </div>
-                    </form>
+                    </div>
+                }
+
+                <!-- Boutons -->
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-check-circle"></i> Enregistrer
+                    </button>
+                    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+                        <i class="bi bi-eye"></i> Voir le détail
+                    </a>
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Annuler
+                    </a>
                 </div>
+
             </div>
         </div>
-        <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-lightbulb"></i> Conseils
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-3">
-                            <i class="bi bi-check-circle text-success me-2"></i>
-                            <strong>Qualité :</strong> Vérifiez les images et la description
-                        </li>
-                        <li class="mb-3">
-                            <i class="bi bi-check-circle text-success me-2"></i>
-                            <strong>Prix :</strong> Ajustez selon le marché local
-                        </li>
-                        <li class="mb-0">
-                            <i class="bi bi-check-circle text-success me-2"></i>
-                            <strong>Publication :</strong> Publiez quand tout est prêt
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
+    </form>
 </div>
 
 @section Scripts {

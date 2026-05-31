@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using RealEstateAdmin.Data;
 using RealEstateAdmin.Models;
@@ -17,11 +18,13 @@ namespace RealEstateAdmin.Services
 
         private readonly ApplicationDbContext _context;
         private readonly IAuditLogService _auditLogService;
+        private readonly IEmailSender _emailSender;
 
-        public AgendaService(ApplicationDbContext context, IAuditLogService auditLogService)
+        public AgendaService(ApplicationDbContext context, IAuditLogService auditLogService, IEmailSender emailSender)
         {
             _context = context;
             _auditLogService = auditLogService;
+            _emailSender = emailSender;
         }
 
         public async Task<AgendaIndexData> GetAgendaAsync(string actorUserId, bool actorIsSuperAdmin)
@@ -143,6 +146,8 @@ namespace RealEstateAdmin.Services
             await _context.SaveChangesAsync();
             await _auditLogService.LogAsync(actorUserId, "Update", "Message", message.Id, "Événement agenda accepté.");
 
+            await SendDecisionEmailAsync(message, projection, accepted: true);
+
             return ServiceResult.Ok("Événement accepté.");
         }
 
@@ -192,6 +197,8 @@ namespace RealEstateAdmin.Services
             _context.Update(message);
             await _context.SaveChangesAsync();
             await _auditLogService.LogAsync(actorUserId, "Update", "Message", message.Id, auditDetails);
+
+            await SendDecisionEmailAsync(message, projection, accepted: string.Equals(targetStatus, "Accepté", StringComparison.OrdinalIgnoreCase));
 
             return ServiceResult.Ok($"Événement {targetStatus.ToLowerInvariant()}.");
         }
@@ -334,6 +341,46 @@ namespace RealEstateAdmin.Services
             }
 
             return "Accepté";
+        }
+
+        private async Task SendDecisionEmailAsync(Message message, AgendaProjection projection, bool accepted)
+        {
+            if (string.IsNullOrWhiteSpace(message.Email)) return;
+
+            var clientName  = message.NomUtilisateur ?? "Client";
+            var bienTitre   = projection.Event.BienTitre ?? "le bien";
+            var slot        = projection.Event.Slot != default
+                              ? projection.Event.Slot.ToString("dddd dd MMMM yyyy à HH:mm",
+                                new System.Globalization.CultureInfo("fr-FR"))
+                              : string.Empty;
+            var typeLabel   = projection.Event.EventType == "VISITE" ? "visite" : "rendez-vous";
+
+            string subject, body;
+            if (accepted)
+            {
+                subject = $"✅ Votre {typeLabel} a été confirmé — DAR.COM";
+                body    = $"""
+                    <p>Bonjour {clientName},</p>
+                    <p>Nous avons le plaisir de vous confirmer votre <strong>{typeLabel}</strong> pour :</p>
+                    <p><strong>{bienTitre}</strong>{(string.IsNullOrEmpty(slot) ? "" : $" — {slot}")}</p>
+                    <p>Notre équipe vous contactera si nécessaire pour les détails.</p>
+                    <p>À bientôt,<br/>L'équipe DAR.COM</p>
+                    """;
+            }
+            else
+            {
+                subject = $"❌ Votre {typeLabel} n'a pas pu être confirmé — DAR.COM";
+                body    = $"""
+                    <p>Bonjour {clientName},</p>
+                    <p>Malheureusement, nous ne pouvons pas confirmer votre <strong>{typeLabel}</strong> pour :</p>
+                    <p><strong>{bienTitre}</strong>{(string.IsNullOrEmpty(slot) ? "" : $" — {slot}")}</p>
+                    <p>N'hésitez pas à proposer un autre créneau via notre plateforme.</p>
+                    <p>Cordialement,<br/>L'équipe DAR.COM</p>
+                    """;
+            }
+
+            try { await _emailSender.SendEmailAsync(message.Email, subject, body); }
+            catch { /* email non bloquant */ }
         }
 
         private sealed record AgendaProjection(AgendaEvent Event, string? AssignedToUserId, string AssignmentStatus);

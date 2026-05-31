@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RealEstateAdmin.Data;
 
@@ -11,9 +12,11 @@ using RealEstateAdmin.Data;
 namespace RealEstateAdmin.Migrations.ApplicationDb
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260531001349_AddEquipementsToBien")]
+    partial class AddEquipementsToBien
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -68,9 +71,6 @@ namespace RealEstateAdmin.Migrations.ApplicationDb
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("BienImmobilierId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime(6)")
@@ -84,10 +84,6 @@ namespace RealEstateAdmin.Migrations.ApplicationDb
                     b.Property<string>("Description")
                         .HasMaxLength(5000)
                         .HasColumnType("varchar(5000)");
-
-                    b.Property<string>("EtatBien")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
 
                     b.Property<string>("Gouvernorat")
                         .IsRequired()
@@ -139,10 +135,6 @@ namespace RealEstateAdmin.Migrations.ApplicationDb
                         .HasColumnType("tinyint(1)")
                         .HasDefaultValue(false);
 
-                    b.Property<string>("NatureBien")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
-
                     b.Property<int>("NbChambres")
                         .HasColumnType("int");
 
@@ -158,10 +150,6 @@ namespace RealEstateAdmin.Migrations.ApplicationDb
 
                     b.Property<int>("SurfaceM2")
                         .HasColumnType("int");
-
-                    b.Property<string>("Titre")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
 
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
@@ -291,10 +279,6 @@ namespace RealEstateAdmin.Migrations.ApplicationDb
                     b.Property<int>("DiscountPercent")
                         .HasColumnType("int");
 
-                    b.Property<string>("EtatBien")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
-
                     b.Property<bool>("HasAscenseur")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("tinyint(1)")
@@ -354,10 +338,6 @@ namespace RealEstateAdmin.Migrations.ApplicationDb
 
                     b.Property<double?>("Longitude")
                         .HasColumnType("double");
-
-                    b.Property<string>("NatureBien")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
 
                     b.Property<int?>("NombrePieces")
                         .HasColumnType("int");
@@ -568,10 +548,6 @@ namespace RealEstateAdmin.Migrations.ApplicationDb
                         .HasColumnType("varchar(200)");
 
                     b.Property<string>("TraiteParId")
-                        .HasMaxLength(450)
-                        .HasColumnType("varchar(450)");
-
-                    b.Property<string>("UserId")
                         .HasMaxLength(450)
                         .HasColumnType("varchar(450)");
 

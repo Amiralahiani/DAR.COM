@@ -8,6 +8,8 @@ namespace RealEstateAdmin.Models
         public int NbChambres { get; set; }
         public string Gouvernorat { get; set; } = string.Empty;
         public string Delegation { get; set; } = string.Empty;
+        public string? NatureBien { get; set; }
+        public string? EtatBien { get; set; }
         public bool HasAscenseur { get; set; }
         public bool HasBalcon { get; set; }
         public bool HasChauffageCentral { get; set; }
@@ -27,6 +29,8 @@ namespace RealEstateAdmin.Models
         public int NbChambres { get; set; }
         public string Gouvernorat { get; set; } = string.Empty;
         public string Delegation { get; set; } = string.Empty;
+        public string? NatureBien { get; set; }
+        public string? EtatBien { get; set; }
         public bool HasAscenseur { get; set; }
         public bool HasBalcon { get; set; }
         public bool HasChauffageCentral { get; set; }
@@ -55,6 +59,9 @@ namespace RealEstateAdmin.Models
         [Required]
         public string Delegation { get; set; } = string.Empty;
 
+        public string? Titre { get; set; }
+        public string? NatureBien { get; set; }
+        public string? EtatBien { get; set; }
         public string? Description { get; set; }
         public List<string> Photos { get; set; } = new();
 

@@ -58,6 +58,7 @@ namespace RealEstateAdmin.Controllers
             ViewBag.CommercialStatusOptions = data.CommercialStatusOptions.ToArray();
             ViewBag.PublicationStatusOptions = data.PublicationStatusOptions.ToArray();
             ViewBag.IsAdmin = data.IsAdmin;
+            ViewBag.BiensVendus = data.BiensVendus;
 
             return View(data.Biens);
         }
@@ -110,7 +111,7 @@ namespace RealEstateAdmin.Controllers
         // POST: BienImmobilier/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Titre,Description,Prix,Adresse,Surface,NombrePieces,ImageUrl,TypeTransaction,StatutCommercial,IsPublished,PublicationStatus,ImageUrlsInput,DiscountPercent")] BienImmobilier bienImmobilier)
+        public async Task<IActionResult> Create([Bind("Id,Titre,Description,Prix,Adresse,Surface,NombrePieces,ImageUrl,TypeTransaction,StatutCommercial,IsPublished,PublicationStatus,ImageUrlsInput,DiscountPercent,NatureBien,EtatBien,HasAscenseur,HasBalcon,HasChauffageCentral,HasClimatisation,HasGarage,HasJardin,HasParking,HasPiscine,HasTerrasse")] BienImmobilier bienImmobilier)
         {
             if (!ModelState.IsValid)
             {
@@ -160,7 +161,7 @@ namespace RealEstateAdmin.Controllers
         // POST: BienImmobilier/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Titre,Description,Prix,Adresse,Surface,NombrePieces,ImageUrl,TypeTransaction,StatutCommercial,IsPublished,PublicationStatus,ImageUrlsInput,DiscountPercent")] BienImmobilier bienImmobilier)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Titre,Description,Prix,Adresse,Surface,NombrePieces,ImageUrl,TypeTransaction,StatutCommercial,IsPublished,PublicationStatus,ImageUrlsInput,DiscountPercent,NatureBien,EtatBien,HasAscenseur,HasBalcon,HasChauffageCentral,HasClimatisation,HasGarage,HasJardin,HasParking,HasPiscine,HasTerrasse")] BienImmobilier bienImmobilier)
         {
             if (!ModelState.IsValid)
             {

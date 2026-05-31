@@ -15,8 +15,11 @@
     let state = {
         currentStep: 1,
         // Step 1
+        titre: '',
         gouvernorat: '',
         delegation: '',
+        natureBien: '',
+        etatBien: '',
         surfaceM2: '',
         nbChambres: 0,
         hasAscenseur: false,
@@ -121,6 +124,14 @@
             setError('delegation', 'Veuillez sélectionner une délégation.');
             ok = false;
         }
+        if (!state.natureBien) {
+            setError('natureBien', 'Veuillez sélectionner la nature du bien.');
+            ok = false;
+        }
+        if (!state.etatBien) {
+            setError('etatBien', "Veuillez sélectionner l'état du bien.");
+            ok = false;
+        }
         const surface = parseInt(state.surfaceM2, 10);
         if (!surface || surface < 1) {
             setError('surface', 'La surface doit être d\'au moins 1 m².');
@@ -166,6 +177,15 @@
 
         const del = document.getElementById('delegation');
         if (del) del.value = state.delegation;
+
+        const titre = document.getElementById('titre');
+        if (titre) titre.value = state.titre;
+
+        const nature = document.getElementById('natureBien');
+        if (nature) nature.value = state.natureBien;
+
+        const etat = document.getElementById('etatBien');
+        if (etat) etat.value = state.etatBien;
 
         const surf = document.getElementById('surface');
         if (surf) surf.value = state.surfaceM2;
@@ -386,6 +406,8 @@
             nbChambres:         state.nbChambres,
             gouvernorat:        state.gouvernorat,
             delegation:         state.delegation,
+            natureBien:         state.natureBien,
+            etatBien:           state.etatBien,
             hasAscenseur:       state.hasAscenseur,
             hasBalcon:          state.hasBalcon,
             hasChauffageCentral:state.hasChauffageCentral,
@@ -470,6 +492,8 @@
             nbChambres:         state.nbChambres,
             gouvernorat:        state.gouvernorat,
             delegation:         state.delegation,
+            natureBien:         state.natureBien,
+            etatBien:           state.etatBien,
             hasAscenseur:       state.hasAscenseur,
             hasBalcon:          state.hasBalcon,
             hasChauffageCentral:state.hasChauffageCentral,
@@ -531,10 +555,13 @@
         ].filter(([k]) => state[k]).map(([, v]) => v);
 
         const rows = [
-            ['Gouvernorat', escapeHtml(state.gouvernorat) || '—'],
-            ['Délégation',  escapeHtml(state.delegation)  || '—'],
-            ['Surface',     state.surfaceM2 ? state.surfaceM2 + ' m²' : '—'],
-            ['Chambres',    state.nbChambres ?? '—']
+            ['Titre',          escapeHtml(state.titre)      || '(généré automatiquement)'],
+            ['Nature du bien', escapeHtml(state.natureBien) || '—'],
+            ['État du bien',   escapeHtml(state.etatBien)   || '—'],
+            ['Gouvernorat',    escapeHtml(state.gouvernorat) || '—'],
+            ['Délégation',     escapeHtml(state.delegation)  || '—'],
+            ['Surface',        state.surfaceM2 ? state.surfaceM2 + ' m²' : '—'],
+            ['Chambres',       state.nbChambres ?? '—']
         ];
 
         grid.innerHTML = rows.map(([k, v]) => `
@@ -593,8 +620,11 @@
             prixTnd:            parseInt(state.prixTnd, 10)   || 0,
             surfaceM2:          parseInt(state.surfaceM2, 10) || 0,
             nbChambres:         state.nbChambres,
+            titre:              state.titre,
             gouvernorat:        state.gouvernorat,
             delegation:         state.delegation,
+            natureBien:         state.natureBien,
+            etatBien:           state.etatBien,
             description:        state.description,
             photos:             state.photos.map(p => p.url),
             hasAscenseur:       state.hasAscenseur,
@@ -665,6 +695,22 @@
         // Délégation change
         document.getElementById('delegation').addEventListener('change', e => {
             state.delegation = e.target.value;
+            saveState();
+        });
+
+        // Titre
+        document.getElementById('titre').addEventListener('input', e => {
+            state.titre = e.target.value;
+            saveState();
+        });
+
+        // Nature + État
+        document.getElementById('natureBien').addEventListener('change', e => {
+            state.natureBien = e.target.value;
+            saveState();
+        });
+        document.getElementById('etatBien').addEventListener('change', e => {
+            state.etatBien = e.target.value;
             saveState();
         });
 

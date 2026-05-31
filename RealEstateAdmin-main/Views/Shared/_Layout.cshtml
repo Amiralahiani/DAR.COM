@@ -86,6 +86,10 @@
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "BienImmobilier" ? "active" : "")" asp-controller="BienImmobilier" asp-action="Index">
                         <i class="bi bi-house-door"></i> Biens immobiliers
                     </a>
+                    <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AdminAnnonce" ? "active" : "")" asp-controller="AdminAnnonce" asp-action="Index">
+                        <i class="bi bi-megaphone"></i> Annonces soumises
+                        @* badge count *@
+                    </a>
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Utilisateur" ? "active" : "")" asp-controller="Utilisateur" asp-action="Index">
                         <i class="bi bi-people"></i> Utilisateurs
                     </a>
@@ -109,7 +113,13 @@
                 else
                 {
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "BienImmobilier" ? "active" : "")" asp-controller="BienImmobilier" asp-action="Index">
-                        <i class="bi bi-house-door"></i> Mes annonces
+                        <i class="bi bi-house-door"></i> Mes biens immobiliers
+                    </a>
+                    <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Annonce" && ViewContext.RouteData.Values["action"]?.ToString() == "MesAnnonces" ? "active" : "")" asp-controller="Annonce" asp-action="MesAnnonces">
+                        <i class="bi bi-megaphone"></i> Mes annonces
+                    </a>
+                    <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "MesDemandes" ? "active" : "")" asp-controller="MesDemandes" asp-action="Index">
+                        <i class="bi bi-calendar2-check"></i> Mes demandes
                     </a>
                 }
             }

@@ -1,0 +1,144 @@
+@model IEnumerable<RealEstateAdmin.Models.Message>
+
+@{
+    ViewData["Title"] = "Mes demandes";
+
+    string ParseMeta(string? contenu, string key)
+    {
+        if (string.IsNullOrWhiteSpace(contenu)) return "";
+        var line = contenu.Split('\n')
+            .Select(l => l.Trim())
+            .FirstOrDefault(l => l.StartsWith(key + "=", StringComparison.OrdinalIgnoreCase));
+        return line?[(key.Length + 1)..].Trim() ?? "";
+    }
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-gradient"><i class="bi bi-calendar2-check"></i> Mes demandes</h1>
+        <a asp-controller="Shop" asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-shop"></i> Retour au shop
+        </a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-calendar2-x" style="font-size:4rem;color:#ccc;"></i>
+            <h4 class="mt-3 text-muted">Aucune demande pour le moment</h4>
+            <p class="text-muted">Réservez une visite ou demandez un rendez-vous depuis le shop.</p>
+            <a asp-controller="Shop" asp-action="Index" class="btn btn-primary mt-2">
+                <i class="bi bi-shop"></i> Voir le shop
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var m in Model)
+            {
+                var type     = ParseMeta(m.Contenu, "TYPE");
+                var bienId   = ParseMeta(m.Contenu, "BIEN_ID");
+                var bienTitre= ParseMeta(m.Contenu, "BIEN_TITRE");
+                var slotRaw  = ParseMeta(m.Contenu, "SLOT_LOCAL");
+
+                var typeLabel = type switch {
+                    "VISITE"    => ("bi-calendar-check",  "Visite",           "primary"),
+                    "RDV_AGENT" => ("bi-person-badge",    "Rendez-vous agent", "info"),
+                    _           => ("bi-heart",           "Intérêt",          "secondary")
+                };
+
+                var (statutIcon, statutLabel, statutClass) = m.Statut switch {
+                    "Accepté" => ("bi-check-circle-fill", "Confirmé",          "success"),
+                    "Refusé"  => ("bi-x-circle-fill",    "Non retenu",        "danger"),
+                    "Répondu" => ("bi-reply-fill",        "Répondu",           "info"),
+                    _         => ("bi-clock-fill",        "En attente",        "warning")
+                };
+
+                DateTime.TryParse(slotRaw, out var slot);
+
+                <div class="col-md-6 col-xl-4">
+                    <div class="card h-100 shadow-sm border-start border-4 border-@typeLabel.Item3">
+                        <div class="card-body">
+
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <span class="badge bg-@typeLabel.Item3 fs-6 px-3 py-2">
+                                    <i class="bi @typeLabel.Item1 me-1"></i>@typeLabel.Item2
+                                </span>
+                                <span class="badge bg-@statutClass">
+                                    <i class="bi @statutIcon me-1"></i>@statutLabel
+                                </span>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(bienTitre))
+                            {
+                                <h6 class="fw-bold mb-1">
+                                    <i class="bi bi-house-door text-muted me-1"></i>@bienTitre
+                                </h6>
+                            }
+
+                            @if (slot != default)
+                            {
+                                <p class="mb-1 text-muted small">
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    @slot.ToString("dddd dd MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))
+                                    à @slot.ToString("HH:mm")
+                                </p>
+                            }
+
+                            <p class="text-muted small mb-3">
+                                <i class="bi bi-send me-1"></i>
+                                Envoyée le @m.DateCreation.ToString("dd/MM/yyyy à HH:mm")
+                            </p>
+
+                            @if (m.Statut == "Accepté")
+                            {
+                                <div class="alert alert-success py-2 small mb-0">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    <strong>Confirmé</strong> — Vous recevrez les détails par email.
+                                    @if (m.DateTraitement.HasValue)
+                                    {
+                                        <span class="text-muted"> (le @m.DateTraitement.Value.ToString("dd/MM/yyyy"))</span>
+                                    }
+                                </div>
+                            }
+                            else if (m.Statut == "Refusé")
+                            {
+                                <div class="alert alert-danger py-2 small mb-0">
+                                    <i class="bi bi-x-circle me-1"></i>
+                                    <strong>Non retenu</strong> — Proposez un autre créneau depuis le shop.
+                                </div>
+                                if (!string.IsNullOrWhiteSpace(bienId))
+                                {
+                                    <a asp-controller="Shop" asp-action="Details" asp-route-id="@bienId"
+                                       class="btn btn-sm btn-outline-primary w-100 mt-2">
+                                        <i class="bi bi-arrow-repeat"></i> Faire une nouvelle demande
+                                    </a>
+                                }
+                            }
+                            else
+                            {
+                                <div class="alert alert-warning py-2 small mb-0">
+                                    <i class="bi bi-clock me-1"></i>
+                                    <strong>En attente</strong> — Notre équipe traite votre demande.
+                                </div>
+                            }
+
+                        </div>
+                        <div class="card-footer text-muted small">
+                            <i class="bi bi-hash"></i> Demande #@m.Id
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

@@ -216,9 +216,30 @@ namespace RealEstateAdmin.Services
                 biens = biens.Where(b => b.DiscountPercent > 0m);
             }
 
+            // Pour un utilisateur non-admin, récupérer aussi les biens qu'il a vendus
+            // (UserId a été transféré à l'acheteur, donc filtrés via SaleTransaction.SellerId)
+            var biensVendus = new List<BienImmobilier>();
+            if (!hasAdminAccess && !string.IsNullOrWhiteSpace(currentUserId))
+            {
+                var bienIdsVendus = await _context.Sales
+                    .Where(s => s.SellerId == currentUserId && s.TransactionStatus == "Finalisée")
+                    .Select(s => s.BienImmobilierId)
+                    .Distinct()
+                    .ToListAsync();
+
+                if (bienIdsVendus.Count > 0)
+                {
+                    biensVendus = await _context.Biens
+                        .Include(b => b.Images)
+                        .Where(b => bienIdsVendus.Contains(b.Id))
+                        .ToListAsync();
+                }
+            }
+
             return new BienIndexData
             {
                 Biens = await biens.ToListAsync(),
+                BiensVendus = biensVendus,
                 Filter = filter,
                 TypeOptions = InternalTypeTransactions,
                 CommercialStatusOptions = InternalCommercialStatuses,
@@ -303,6 +324,42 @@ namespace RealEstateAdmin.Services
             await _context.SaveChangesAsync();
             await SaveImagesAsync(bienImmobilier);
             await _auditLogService.LogAsync(currentUserId, "Create", "BienImmobilier", bienImmobilier.Id, $"Création du bien '{bienImmobilier.Titre}'");
+
+            // Créer automatiquement l'annonce liée — toute création de bien doit avoir une annonce
+            var adresseParts = (bienImmobilier.Adresse ?? "").Split(',');
+            var delegation   = adresseParts.Length >= 2 ? adresseParts[0].Trim() : (bienImmobilier.Adresse ?? "—");
+            var gouvernorat  = adresseParts.Length >= 2 ? adresseParts[1].Trim() : (bienImmobilier.Adresse ?? "—");
+
+            var annonce = new Annonce
+            {
+                UserId              = bienImmobilier.UserId,
+                Gouvernorat         = gouvernorat,
+                Delegation          = delegation,
+                SurfaceM2           = bienImmobilier.Surface ?? 0,
+                NbChambres          = bienImmobilier.NombrePieces ?? 0,
+                NatureBien          = bienImmobilier.NatureBien,
+                EtatBien            = bienImmobilier.EtatBien,
+                Description         = bienImmobilier.Description,
+                PrixTnd             = (int)bienImmobilier.Prix,
+                HasAscenseur        = bienImmobilier.HasAscenseur,
+                HasBalcon           = bienImmobilier.HasBalcon,
+                HasChauffageCentral = bienImmobilier.HasChauffageCentral,
+                HasClimatisation    = bienImmobilier.HasClimatisation,
+                HasGarage           = bienImmobilier.HasGarage,
+                HasJardin           = bienImmobilier.HasJardin,
+                HasParking          = bienImmobilier.HasParking,
+                HasPiscine          = bienImmobilier.HasPiscine,
+                HasTerrasse         = bienImmobilier.HasTerrasse,
+                Statut              = "Approuvée",
+                BienImmobilierId    = bienImmobilier.Id,
+                CreatedAt           = DateTime.UtcNow,
+            };
+
+            if (!string.IsNullOrWhiteSpace(bienImmobilier.ImageUrl))
+                annonce.Photos.Add(new AnnoncePhoto { Url = bienImmobilier.ImageUrl });
+
+            _context.Annonces.Add(annonce);
+            await _context.SaveChangesAsync();
 
             return ServiceResult.Ok();
         }

@@ -1,14 +1,122 @@
 @{
-    ViewData["Title"] = "Chatbot";
+    ViewData["Title"] = "Assistant IA";
+    Layout = "_Layout";
 }
 
-<div class="container py-4">
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-dark text-white">
-            <i class="bi bi-chat-left-text me-2"></i> Chatbot IA
+<style>
+    .chatbot-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 80px);
+        padding: 1rem 1.5rem 0;
+    }
+
+    .chatbot-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: .75rem;
+        flex-shrink: 0;
+    }
+
+    .chatbot-title {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #17313a;
+    }
+
+    .chatbot-title .avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #d6a547, #c0563a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .chatbot-status {
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+        font-size: .8rem;
+        color: #6b7280;
+    }
+
+    .chatbot-status .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #22c55e;
+        animation: pulse-dot 2s infinite;
+    }
+
+    @@keyframes pulse-dot {
+        0%, 100% { opacity: 1; }
+        50%       { opacity: .4; }
+    }
+
+    .chatbot-frame-shell {
+        flex: 1;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0,0,0,.10);
+        border: 1px solid #e5e7eb;
+        min-height: 0;
+    }
+
+    .chatbot-frame-shell iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        display: block;
+    }
+
+    .chatbot-footer {
+        text-align: center;
+        font-size: .72rem;
+        color: #9ca3af;
+        padding: .5rem 0 .75rem;
+        flex-shrink: 0;
+    }
+</style>
+
+<div class="chatbot-wrapper">
+
+    <!-- Barre de titre -->
+    <div class="chatbot-topbar">
+        <div class="chatbot-title">
+            <div class="avatar"><i class="bi bi-stars"></i></div>
+            <div>
+                <div>Assistant DAR.COM</div>
+                <div style="font-size:.75rem;font-weight:400;color:#6b7280;">
+                    Posez vos questions sur l'immobilier
+                </div>
+            </div>
         </div>
-        <div class="card-body p-0">
-            <iframe src="/chatbot/index.html" style="width:100%; min-height:80vh; height:calc(100vh - 180px); border:none;" title="Chatbot IA"></iframe>
+        <div class="chatbot-status">
+            <span class="dot"></span>
+            En ligne
         </div>
     </div>
+
+    <!-- Iframe chatbot -->
+    <div class="chatbot-frame-shell">
+        <iframe src="/chatbot/index.html" title="Assistant IA DAR.COM"
+                allow="microphone"></iframe>
+    </div>
+
+    <!-- Footer discret -->
+    <div class="chatbot-footer">
+        <i class="bi bi-shield-lock me-1"></i>
+        Vos conversations sont confidentielles &nbsp;·&nbsp;
+        Propulsé par l'IA DAR.COM
+    </div>
+
 </div>

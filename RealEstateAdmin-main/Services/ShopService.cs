@@ -591,6 +591,7 @@ namespace RealEstateAdmin.Services
         {
             return new Message
             {
+                UserId = user.Id,
                 NomUtilisateur = string.IsNullOrWhiteSpace(user.Nom) ? user.UserName : user.Nom,
                 Email = user.Email,
                 Sujet = subject,

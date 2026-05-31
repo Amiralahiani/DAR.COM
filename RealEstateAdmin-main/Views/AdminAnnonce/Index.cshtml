@@ -1,0 +1,170 @@
+@model IEnumerable<RealEstateAdmin.Models.Annonce>
+
+@{
+    ViewData["Title"] = "Gestion des annonces";
+    var counts = ViewBag.Counts;
+    var filtre = (string?)ViewBag.StatutFiltre;
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-gradient">
+            <i class="bi bi-megaphone"></i> Gestion des annonces
+        </h1>
+        <a asp-controller="BienImmobilier" asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-house-door"></i> Voir les biens
+        </a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Compteurs / filtres -->
+    <div class="d-flex gap-2 mb-4 flex-wrap">
+        <a asp-action="Index" class="btn @(filtre == null ? "btn-primary" : "btn-outline-primary")">
+            Toutes <span class="badge bg-white text-primary ms-1">@((int)counts.EnAttente + (int)counts.Approuvee + (int)counts.Refusee)</span>
+        </a>
+        <a asp-action="Index" asp-route-statut="En attente" class="btn @(filtre == "En attente" ? "btn-warning" : "btn-outline-warning")">
+            <i class="bi bi-clock"></i> En attente <span class="badge bg-white text-warning ms-1">@counts.EnAttente</span>
+        </a>
+        <a asp-action="Index" asp-route-statut="Approuvée" class="btn @(filtre == "Approuvée" ? "btn-success" : "btn-outline-success")">
+            <i class="bi bi-check-circle"></i> Approuvées <span class="badge bg-white text-success ms-1">@counts.Approuvee</span>
+        </a>
+        <a asp-action="Index" asp-route-statut="Refusée" class="btn @(filtre == "Refusée" ? "btn-danger" : "btn-outline-danger")">
+            <i class="bi bi-x-circle"></i> Refusées <span class="badge bg-white text-danger ms-1">@counts.Refusee</span>
+        </a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i> Aucune annonce trouvée.
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var annonce in Model)
+            {
+                var badgeClass = annonce.Statut switch
+                {
+                    "Approuvée" => "bg-success",
+                    "Refusée"   => "bg-danger",
+                    _           => "bg-warning text-dark"
+                };
+
+                var photoUrl = annonce.Photos.FirstOrDefault()?.Url;
+
+                <div class="col-md-6 col-xl-4">
+                    <div class="card h-100 shadow-sm">
+                        @if (!string.IsNullOrWhiteSpace(photoUrl))
+                        {
+                            <img src="@photoUrl" class="card-img-top" style="height:200px;object-fit:cover;" alt="Photo" />
+                        }
+                        else
+                        {
+                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height:200px;">
+                                <i class="bi bi-image text-muted" style="font-size:3rem;"></i>
+                            </div>
+                        }
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="card-title mb-0">
+                                    @annonce.SurfaceM2 m² — @annonce.NbChambres ch. — @annonce.Delegation, @annonce.Gouvernorat
+                                </h6>
+                                <span class="badge @badgeClass ms-2">@annonce.Statut</span>
+                            </div>
+                            <p class="text-muted small mb-1">
+                                @if (!string.IsNullOrWhiteSpace(annonce.NatureBien))
+                                {
+                                    <span class="badge bg-primary me-1">@annonce.NatureBien</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(annonce.EtatBien))
+                                {
+                                    var etatColor = annonce.EtatBien switch {
+                                        "Rénové"     => "bg-success",
+                                        "Bon état"   => "bg-info text-dark",
+                                        _            => "bg-secondary"
+                                    };
+                                    <span class="badge @etatColor">@annonce.EtatBien</span>
+                                }
+                            </p>
+                            <p class="text-muted small mb-1">
+                                <i class="bi bi-currency-exchange"></i> @annonce.PrixTnd.ToString("N0") TND
+                            </p>
+                            <p class="text-muted small mb-2">
+                                <i class="bi bi-calendar3"></i> @annonce.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                            </p>
+
+                            @if (annonce.Description != null)
+                            {
+                                <p class="small text-truncate mb-2" title="@annonce.Description">
+                                    @annonce.Description
+                                </p>
+                            }
+
+                            <!-- Équipements -->
+                            <div class="d-flex flex-wrap gap-1 mb-3">
+                                @if (annonce.HasAscenseur)     { <span class="badge bg-secondary"><i class="bi bi-elevator"></i> Ascenseur</span> }
+                                @if (annonce.HasBalcon)        { <span class="badge bg-secondary"><i class="bi bi-house-heart"></i> Balcon</span> }
+                                @if (annonce.HasPiscine)       { <span class="badge bg-secondary"><i class="bi bi-water"></i> Piscine</span> }
+                                @if (annonce.HasJardin)        { <span class="badge bg-secondary"><i class="bi bi-tree"></i> Jardin</span> }
+                                @if (annonce.HasGarage)        { <span class="badge bg-secondary"><i class="bi bi-car-front"></i> Garage</span> }
+                                @if (annonce.HasParking)       { <span class="badge bg-secondary"><i class="bi bi-p-square"></i> Parking</span> }
+                                @if (annonce.HasTerrasse)      { <span class="badge bg-secondary"><i class="bi bi-door-open"></i> Terrasse</span> }
+                                @if (annonce.HasClimatisation) { <span class="badge bg-secondary"><i class="bi bi-wind"></i> Clim</span> }
+                                @if (annonce.HasChauffageCentral) { <span class="badge bg-secondary"><i class="bi bi-thermometer-sun"></i> Chauffage</span> }
+                            </div>
+
+                            @if (annonce.Statut == "Approuvée" && annonce.BienImmobilierId != null)
+                            {
+                                <a asp-controller="BienImmobilier" asp-action="Details" asp-route-id="@annonce.BienImmobilierId"
+                                   class="btn btn-outline-success btn-sm w-100">
+                                    <i class="bi bi-box-arrow-up-right"></i> Voir le bien #@annonce.BienImmobilierId
+                                </a>
+                            }
+                            else if (annonce.Statut == "En attente")
+                            {
+                                <div class="d-flex gap-2">
+                                    <form asp-action="Approuver" asp-route-id="@annonce.Id" method="post" class="flex-fill">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-success w-100"
+                                                onclick="return confirm('Approuver cette annonce ? Le bien sera créé et publié immédiatement sur le shop.')">
+                                            <i class="bi bi-check-lg"></i> Approuver
+                                        </button>
+                                    </form>
+                                    <form asp-action="Refuser" asp-route-id="@annonce.Id" method="post" class="flex-fill">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-danger w-100"
+                                                onclick="return confirm('Refuser cette annonce ?')">
+                                            <i class="bi bi-x-lg"></i> Refuser
+                                        </button>
+                                    </form>
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted small mb-0 fst-italic">Annonce déjà traitée.</p>
+                            }
+                        </div>
+                        <div class="card-footer text-muted small">
+                            <i class="bi bi-images"></i> @annonce.Photos.Count photo(s) — Annonce #@annonce.Id
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

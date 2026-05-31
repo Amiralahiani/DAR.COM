@@ -6,6 +6,9 @@ namespace RealEstateAdmin.Models
     {
         public int Id { get; set; }
 
+        [StringLength(450)]
+        public string? UserId { get; set; }
+
         [Display(Name = "Nom d'utilisateur")]
         [StringLength(100, ErrorMessage = "Le nom ne peut pas dépasser 100 caractères")]
         public string? NomUtilisateur { get; set; }

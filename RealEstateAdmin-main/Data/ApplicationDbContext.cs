@@ -63,7 +63,18 @@ namespace RealEstateAdmin.Data
                 entity.Property(e => e.PublicationStatus).HasMaxLength(50).HasDefaultValue("En attente");
                 entity.Property(e => e.PublicationValidatedByAdminId).HasMaxLength(450);
                 entity.Property(e => e.StatutCommercial).HasMaxLength(50).HasDefaultValue("Disponible");
-                
+                entity.Property(e => e.NatureBien).HasMaxLength(50);
+                entity.Property(e => e.EtatBien).HasMaxLength(50);
+                entity.Property(e => e.HasAscenseur).HasDefaultValue(false);
+                entity.Property(e => e.HasBalcon).HasDefaultValue(false);
+                entity.Property(e => e.HasChauffageCentral).HasDefaultValue(false);
+                entity.Property(e => e.HasClimatisation).HasDefaultValue(false);
+                entity.Property(e => e.HasGarage).HasDefaultValue(false);
+                entity.Property(e => e.HasJardin).HasDefaultValue(false);
+                entity.Property(e => e.HasParking).HasDefaultValue(false);
+                entity.Property(e => e.HasPiscine).HasDefaultValue(false);
+                entity.Property(e => e.HasTerrasse).HasDefaultValue(false);
+
                 // Relation vers l'utilisateur Identity (projection UserReference)
                 entity.HasOne(e => e.User)
                     .WithMany()
@@ -86,6 +97,7 @@ namespace RealEstateAdmin.Data
             modelBuilder.Entity<Message>(entity =>
             {
                 entity.HasKey(e => e.Id);
+                entity.Property(e => e.UserId).HasMaxLength(450);
                 entity.Property(e => e.NomUtilisateur).HasMaxLength(100);
                 entity.Property(e => e.Email).HasMaxLength(200);
                 entity.Property(e => e.Sujet).HasMaxLength(200);
@@ -187,6 +199,10 @@ namespace RealEstateAdmin.Data
                 entity.Property(e => e.Description).HasMaxLength(5000);
                 entity.Property(e => e.Statut).HasMaxLength(50).HasDefaultValue("En attente");
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                entity.Property(e => e.BienImmobilierId).IsRequired(false);
+                entity.Property(e => e.Titre).HasMaxLength(200);
+                entity.Property(e => e.NatureBien).HasMaxLength(50);
+                entity.Property(e => e.EtatBien).HasMaxLength(50);
                 entity.Property(e => e.HasAscenseur).HasDefaultValue(false);
                 entity.Property(e => e.HasBalcon).HasDefaultValue(false);
                 entity.Property(e => e.HasChauffageCentral).HasDefaultValue(false);

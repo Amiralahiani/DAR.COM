@@ -144,6 +144,7 @@ namespace RealEstateAdmin.Services
     public class BienIndexData
     {
         public IReadOnlyList<BienImmobilier> Biens { get; set; } = new List<BienImmobilier>();
+        public IReadOnlyList<BienImmobilier> BiensVendus { get; set; } = new List<BienImmobilier>();
         public BienFilter Filter { get; set; } = new BienFilter();
         public IReadOnlyList<string> TypeOptions { get; set; } = new List<string>();
         public IReadOnlyList<string> CommercialStatusOptions { get; set; } = new List<string>();

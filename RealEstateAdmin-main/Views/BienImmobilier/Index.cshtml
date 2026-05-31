@@ -111,15 +111,22 @@
     @{
         var isAdmin = User.IsInRole("Admin") || User.IsInRole("SuperAdmin");
         var biensList = Model?.ToList() ?? new List<RealEstateAdmin.Models.BienImmobilier>();
-        Func<RealEstateAdmin.Models.BienImmobilier, bool> isForSale = b =>
-            string.IsNullOrWhiteSpace(b.TypeTransaction)
-            || string.Equals(b.TypeTransaction, "A Vendre", System.StringComparison.OrdinalIgnoreCase)
-            || string.Equals(b.TypeTransaction, "A Louer", System.StringComparison.OrdinalIgnoreCase);
-        var biensAVendre = biensList.Where(isForSale).ToList();
+        var biensVendusList = (ViewBag.BiensVendus as IReadOnlyList<RealEstateAdmin.Models.BienImmobilier>)?.ToList()
+                              ?? new List<RealEstateAdmin.Models.BienImmobilier>();
+
+        var biensEnCoursDeVente = biensList
+            .Where(b => string.Equals(b.StatutCommercial, "En cours de vente", System.StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(b.StatutCommercial, "Réservé", System.StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var biensDisponibles = biensList
+            .Where(b => !string.Equals(b.TypeTransaction, "Acheté", System.StringComparison.OrdinalIgnoreCase)
+                     && !string.Equals(b.TypeTransaction, "Achete", System.StringComparison.OrdinalIgnoreCase)
+                     && !string.Equals(b.StatutCommercial, "En cours de vente", System.StringComparison.OrdinalIgnoreCase)
+                     && !string.Equals(b.StatutCommercial, "Réservé", System.StringComparison.OrdinalIgnoreCase))
+            .ToList();
         var biensAchetes = biensList
-            .Where(b =>
-                string.Equals(b.TypeTransaction, "Acheté", System.StringComparison.OrdinalIgnoreCase)
-                || string.Equals(b.TypeTransaction, "Achete", System.StringComparison.OrdinalIgnoreCase))
+            .Where(b => string.Equals(b.TypeTransaction, "Acheté", System.StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(b.TypeTransaction, "Achete", System.StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
 
@@ -159,15 +166,20 @@
                                         }
                                     </div>
 
-                                    <div class="mb-2 d-flex gap-2 flex-wrap">
-                                        <span class="badge @(item.PublicationStatus == "Publié" ? "bg-success" : item.PublicationStatus == "Refusé" ? "bg-danger" : "bg-warning text-dark")">
-                                            @item.PublicationStatus
-                                        </span>
-                                        <span class="badge @(item.StatutCommercial == "Vendu" ? "bg-secondary" : item.StatutCommercial == "Réservé" ? "bg-warning text-dark" : "bg-success")">
-                                            @item.StatutCommercial
-                                        </span>
-                                        <span class="badge bg-info text-dark">
-                                            @item.TypeTransaction
+                                    <div class="mb-2">
+                                        @{
+                                            // Un seul badge qui reflète l'état réel du bien
+                                            var (badgeIcon, badgeText, badgeClass) =
+                                                item.StatutCommercial == "Vendu"             ? ("bi-check-circle-fill",  "Vendu",               "bg-secondary") :
+                                                item.StatutCommercial == "En cours de vente" ? ("bi-arrow-repeat",       "Vente en cours",      "bg-info text-dark") :
+                                                item.StatutCommercial == "Réservé"           ? ("bi-hourglass-split",    "Réservé",             "bg-warning text-dark") :
+                                                item.PublicationStatus == "Refusé"           ? ("bi-eye-slash-fill",     "Non publié",          "bg-danger") :
+                                                item.PublicationStatus == "En attente"       ? ("bi-clock-fill",         "En attente validation","bg-warning text-dark") :
+                                                item.PublicationStatus == "Publié"           ? ("bi-eye-fill",           "Publié · Disponible", "bg-success") :
+                                                                                               ("bi-circle",             item.PublicationStatus, "bg-secondary");
+                                        }
+                                        <span class="badge @badgeClass rounded-pill px-3 py-2">
+                                            <i class="bi @badgeIcon me-1"></i>@badgeText
                                         </span>
                                     </div>
 
@@ -281,11 +293,49 @@
         }
         else
         {
-            <h3 class="mt-4 mb-3">Biens à vendre</h3>
-            @if (biensAVendre.Any())
+            @if (biensEnCoursDeVente.Any())
+            {
+                <h3 class="mt-4 mb-3">
+                    <i class="bi bi-clock-history text-warning"></i> Biens en cours de vente
+                    <span class="badge bg-warning text-dark ms-2">@biensEnCoursDeVente.Count</span>
+                </h3>
+                <div class="row g-4 mb-4">
+                    @foreach (var item in biensEnCoursDeVente)
+                    {
+                        <div class="col-md-6 col-lg-4">
+                            <div class="property-card card h-100 border-warning border-2">
+                                <div class="property-image">
+                                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                    {
+                                        <img src="@item.ImageUrl" alt="@item.Titre" class="cover-image-fill" />
+                                    }
+                                    else { <i class="bi bi-house-heart property-placeholder-icon"></i> }
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title fw-bold">@item.Titre</h5>
+                                    <div class="property-price">@item.Prix.ToString("N2") DT</div>
+                                    <div class="mb-2 d-flex gap-2 flex-wrap">
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> @item.StatutCommercial</span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(item.Adresse))
+                                    {
+                                        <p class="text-muted mb-3"><i class="bi bi-geo-alt"></i> @item.Adresse</p>
+                                    }
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-primary w-100">
+                                        <i class="bi bi-eye"></i> Détails
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            <h3 class="mt-4 mb-3">Biens disponibles à vendre</h3>
+            @if (biensDisponibles.Any())
             {
                 <div class="row g-4">
-                    @foreach (var item in biensAVendre)
+                    @foreach (var item in biensDisponibles)
                     {
                         <div class="col-md-6 col-lg-4">
                             <div class="property-card card h-100">
@@ -449,10 +499,48 @@
             }
             else
             {
-                <div class="card">
+                <div class="card mb-4">
                     <div class="card-body text-center py-4">
                         <h5 class="text-muted mb-0">Aucun bien acheté</h5>
                     </div>
+                </div>
+            }
+
+            @if (biensVendusList.Any())
+            {
+                <h3 class="mt-5 mb-3">
+                    <i class="bi bi-check-circle text-secondary"></i> Biens vendus
+                    <span class="badge bg-secondary ms-2">@biensVendusList.Count</span>
+                </h3>
+                <div class="row g-4">
+                    @foreach (var item in biensVendusList)
+                    {
+                        <div class="col-md-6 col-lg-4">
+                            <div class="property-card card h-100 border-secondary">
+                                <div class="property-image">
+                                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                    {
+                                        <img src="@item.ImageUrl" alt="@item.Titre" class="cover-image-fill" style="filter:grayscale(40%)" />
+                                    }
+                                    else { <i class="bi bi-house-heart property-placeholder-icon"></i> }
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title fw-bold">@item.Titre</h5>
+                                    <div class="property-price text-muted">@item.Prix.ToString("N2") DT</div>
+                                    <div class="mb-2">
+                                        <span class="badge bg-secondary"><i class="bi bi-check-lg"></i> Vendu</span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(item.Adresse))
+                                    {
+                                        <p class="text-muted mb-3"><i class="bi bi-geo-alt"></i> @item.Adresse</p>
+                                    }
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary w-100">
+                                        <i class="bi bi-eye"></i> Voir le dossier
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 </div>
             }
         }

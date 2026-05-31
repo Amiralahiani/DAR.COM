@@ -333,6 +333,7 @@ namespace RealEstateAdmin.Services
             var annonce = new Annonce
             {
                 UserId              = bienImmobilier.UserId,
+                Titre               = bienImmobilier.Titre,
                 Gouvernorat         = gouvernorat,
                 Delegation          = delegation,
                 SurfaceM2           = bienImmobilier.Surface ?? 0,

@@ -66,6 +66,9 @@
                 };
 
                 var photoUrl = annonce.Photos.FirstOrDefault()?.Url;
+                var titreAnnonce = !string.IsNullOrWhiteSpace(annonce.Titre)
+                    ? annonce.Titre
+                    : $"{annonce.SurfaceM2} m² — {annonce.NbChambres} ch. — {annonce.Delegation}, {annonce.Gouvernorat}";
 
                 <div class="col-md-6 col-xl-4">
                     <div class="card h-100 shadow-sm">
@@ -82,7 +85,7 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h6 class="card-title mb-0">
-                                    @annonce.SurfaceM2 m² — @annonce.NbChambres ch. — @annonce.Delegation, @annonce.Gouvernorat
+                                    @titreAnnonce
                                 </h6>
                                 <span class="badge @badgeClass ms-2">@annonce.Statut</span>
                             </div>

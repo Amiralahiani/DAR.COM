@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RealEstateAdmin.Data;
 using RealEstateAdmin.Models;
+using System.Text;
+using System.Text.Json;
 
 namespace RealEstateAdmin.Controllers
 {
@@ -12,11 +14,22 @@ namespace RealEstateAdmin.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<AdminAnnonceController> _logger;
 
-        public AdminAnnonceController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+        public AdminAnnonceController(
+            ApplicationDbContext db,
+            UserManager<ApplicationUser> userManager,
+            IHttpClientFactory httpClientFactory,
+            IConfiguration configuration,
+            ILogger<AdminAnnonceController> logger)
         {
             _db = db;
             _userManager = userManager;
+            _httpClientFactory = httpClientFactory;
+            _configuration = configuration;
+            _logger = logger;
         }
 
         // GET: AdminAnnonce
@@ -100,6 +113,10 @@ namespace RealEstateAdmin.Controllers
 
             annonce.Statut = "Approuvée";
             annonce.BienImmobilierId = bien.Id;
+            await _db.SaveChangesAsync();
+
+            // Compteur ML: incrémenter à la publication shop (et non à la vente).
+            await TrySendPublicationToPriceModelAsync(annonce);
 
             TempData["Success"] = $"Annonce #{annonce.Id} approuvée — Bien #{bien.Id} créé et publié sur le shop.";
             return RedirectToAction(nameof(Index));
@@ -142,6 +159,99 @@ namespace RealEstateAdmin.Controllers
                     _     => "Villa"
                 };
             return $"{type} {a.SurfaceM2} m² — {a.Delegation}, {a.Gouvernorat}";
+        }
+
+        private async Task TrySendPublicationToPriceModelAsync(Annonce annonce)
+        {
+            var mlEnabled = _configuration.GetValue<bool>("PricePredictionApi:Enabled");
+            var mlBaseUrl = _configuration["PricePredictionApi:BaseUrl"];
+            if (!mlEnabled || string.IsNullOrWhiteSpace(mlBaseUrl))
+                return;
+
+            var client = _httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(10);
+
+            try
+            {
+                // 1) Créer une prédiction pour obtenir prediction_id
+                var estimatePayload = JsonSerializer.Serialize(new
+                {
+                    nature_bien = annonce.NatureBien ?? "Autre",
+                    gouvernorat = annonce.Gouvernorat,
+                    delegation = annonce.Delegation,
+                    surface_m2 = annonce.SurfaceM2,
+                    nb_chambres = annonce.NbChambres,
+                    has_ascenseur = annonce.HasAscenseur ? 1 : 0,
+                    has_balcon = annonce.HasBalcon ? 1 : 0,
+                    has_chauffage_central = annonce.HasChauffageCentral ? 1 : 0,
+                    has_climatisation = annonce.HasClimatisation ? 1 : 0,
+                    has_garage = annonce.HasGarage ? 1 : 0,
+                    has_jardin = annonce.HasJardin ? 1 : 0,
+                    has_parking = annonce.HasParking ? 1 : 0,
+                    has_piscine = annonce.HasPiscine ? 1 : 0,
+                    has_terrasse = annonce.HasTerrasse ? 1 : 0,
+                    etat = NormalizeEtatForMl(annonce.EtatBien)
+                });
+
+                var estimateResponse = await client.PostAsync(
+                    $"{mlBaseUrl}/estimer",
+                    new StringContent(estimatePayload, Encoding.UTF8, "application/json"));
+
+                if (!estimateResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Publication ML: /estimer a retourné {Status} pour annonce #{AnnonceId}.",
+                        estimateResponse.StatusCode, annonce.Id);
+                    return;
+                }
+
+                var estimateJson = await estimateResponse.Content.ReadAsStringAsync();
+                var estimateDoc = JsonSerializer.Deserialize<JsonElement>(estimateJson);
+                var predictionId = estimateDoc.TryGetProperty("prediction_id", out var idEl)
+                    ? idEl.GetString()
+                    : null;
+
+                if (string.IsNullOrWhiteSpace(predictionId))
+                {
+                    _logger.LogWarning("Publication ML: prediction_id absent pour annonce #{AnnonceId}.", annonce.Id);
+                    return;
+                }
+
+                // 2) Confirmer immédiatement avec le prix publié pour incrémenter le compteur
+                var confirmPayload = JsonSerializer.Serialize(new
+                {
+                    prediction_id = predictionId,
+                    prix_reel_tnd = annonce.PrixTnd
+                });
+
+                var confirmResponse = await client.PostAsync(
+                    $"{mlBaseUrl}/confirmer-vente",
+                    new StringContent(confirmPayload, Encoding.UTF8, "application/json"));
+
+                if (!confirmResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Publication ML: /confirmer-vente a retourné {Status} pour annonce #{AnnonceId}.",
+                        confirmResponse.StatusCode, annonce.Id);
+                    return;
+                }
+
+                _logger.LogInformation("Publication ML confirmée pour annonce #{AnnonceId}.", annonce.Id);
+            }
+            catch (Exception ex)
+            {
+                // Non bloquant : une erreur ML ne doit pas annuler la publication.
+                _logger.LogWarning(ex, "Publication ML échouée pour annonce #{AnnonceId}.", annonce.Id);
+            }
+        }
+
+        private static string? NormalizeEtatForMl(string? etatBien)
+        {
+            return etatBien switch
+            {
+                "Bon état" => "bon_etat",
+                "Etat moyen" => "etat_moyen",
+                "Rénové" => "retape",
+                _ => etatBien
+            };
         }
     }
 }

@@ -156,16 +156,16 @@ namespace RealEstateAdmin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> PredictPrice([FromBody] PredictPriceRequest request)
         {
-            // ── Modèle ML de prix (à brancher par le collègue) ───────────────
-            // Quand le modèle est prêt :
+            // ── Modèle ML de prix (dossier `estimation prix`) ────────────────
+            // Configuration attendue :
             //   1. Mettre PricePredictionApi:Enabled = true dans appsettings.json
             //   2. Mettre PricePredictionApi:BaseUrl  = "http://localhost:PORT"
-            //   3. Mettre PricePredictionApi:Endpoint = "/predict"  (ou l'endpoint réel)
-            //   4. Le payload envoyé est déjà formaté ci-dessous — adapter si besoin
-            //   5. La réponse attendue : { "prix_tnd": number }
+            //   3. Mettre PricePredictionApi:Endpoint = "/estimer"
+            // Réponse principale de l'API Python :
+            // { "prix_predit_tnd": number, "prediction_id": "...", ... }
             var mlEnabled = _configuration.GetValue<bool>("PricePredictionApi:Enabled");
             var mlBaseUrl = _configuration["PricePredictionApi:BaseUrl"];
-            var mlEndpoint = _configuration["PricePredictionApi:Endpoint"] ?? "/predict";
+            var mlEndpoint = _configuration["PricePredictionApi:Endpoint"] ?? "/estimer";
 
             if (mlEnabled && !string.IsNullOrWhiteSpace(mlBaseUrl))
             {
@@ -176,19 +176,21 @@ namespace RealEstateAdmin.Controllers
 
                     var body = JsonSerializer.Serialize(new
                     {
+                        nature_bien           = request.NatureBien ?? "Autre",
                         surface_m2            = request.SurfaceM2,
                         nb_chambres           = request.NbChambres,
                         gouvernorat           = request.Gouvernorat,
                         delegation            = request.Delegation,
-                        has_ascenseur         = request.HasAscenseur,
-                        has_balcon            = request.HasBalcon,
-                        has_chauffage_central = request.HasChauffageCentral,
-                        has_climatisation     = request.HasClimatisation,
-                        has_garage            = request.HasGarage,
-                        has_jardin            = request.HasJardin,
-                        has_parking           = request.HasParking,
-                        has_piscine           = request.HasPiscine,
-                        has_terrasse          = request.HasTerrasse
+                        has_ascenseur         = request.HasAscenseur ? 1 : 0,
+                        has_balcon            = request.HasBalcon ? 1 : 0,
+                        has_chauffage_central = request.HasChauffageCentral ? 1 : 0,
+                        has_climatisation     = request.HasClimatisation ? 1 : 0,
+                        has_garage            = request.HasGarage ? 1 : 0,
+                        has_jardin            = request.HasJardin ? 1 : 0,
+                        has_parking           = request.HasParking ? 1 : 0,
+                        has_piscine           = request.HasPiscine ? 1 : 0,
+                        has_terrasse          = request.HasTerrasse ? 1 : 0,
+                        etat                  = NormalizeEtatForMl(request.EtatBien)
                     });
 
                     var response = await client.PostAsync(
@@ -199,8 +201,28 @@ namespace RealEstateAdmin.Controllers
                     {
                         var json   = await response.Content.ReadAsStringAsync();
                         var doc    = JsonSerializer.Deserialize<JsonElement>(json);
-                        if (doc.TryGetProperty("prix_tnd", out var p))
-                            return Json(new { prix_tnd = p.GetInt32() });
+                        if (TryExtractPrice(doc, out var predictedPrice))
+                        {
+                            int? low = null;
+                            int? high = null;
+
+                            if (TryExtractInt(doc, "prix_fourchette_basse", out var lowValue)) low = lowValue;
+                            if (TryExtractInt(doc, "prix_fourchette_haute", out var highValue)) high = highValue;
+
+                            return Json(new
+                            {
+                                prix_tnd = predictedPrice,
+                                prediction_id = doc.TryGetProperty("prediction_id", out var id) ? id.GetString() : null,
+                                prix_fourchette_basse = low,
+                                prix_fourchette_haute = high,
+                                confiance = doc.TryGetProperty("confiance", out var c) ? c.GetString() : null,
+                                message = doc.TryGetProperty("message", out var m) ? m.GetString() : null
+                            });
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Modèle ML prix a retourné {Status}.", response.StatusCode);
                     }
                 }
                 catch (Exception ex)
@@ -433,6 +455,45 @@ namespace RealEstateAdmin.Controllers
 
             // Round to nearest 1000
             return (int)Math.Round(base_ / 1000.0) * 1000;
+        }
+
+        private static string? NormalizeEtatForMl(string? etatBien)
+        {
+            return etatBien switch
+            {
+                "Bon état" => "bon_etat",
+                "Etat moyen" => "etat_moyen",
+                "Rénové" => "retape",
+                _ => etatBien
+            };
+        }
+
+        private static bool TryExtractPrice(JsonElement doc, out int value)
+        {
+            if (TryExtractInt(doc, "prix_predit_tnd", out value))
+                return true;
+
+            return TryExtractInt(doc, "prix_tnd", out value);
+        }
+
+        private static bool TryExtractInt(JsonElement doc, string propertyName, out int value)
+        {
+            value = 0;
+            if (!doc.TryGetProperty(propertyName, out var prop))
+                return false;
+
+            if (prop.ValueKind == JsonValueKind.Number)
+            {
+                if (prop.TryGetInt32(out value))
+                    return true;
+                if (prop.TryGetDouble(out var doubleValue))
+                {
+                    value = (int)Math.Round(doubleValue);
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // DTOs for image analysis microservice responses

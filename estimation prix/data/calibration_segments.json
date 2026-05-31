@@ -1,0 +1,90 @@
+{
+  "segments": {
+    "appartement": {
+      "n": 427,
+      "ratio_p10": 0.7433780390225112,
+      "ratio_p25": 0.8744773312318637,
+      "ratio_p50": 1.0136197420502178,
+      "ratio_p75": 1.1654532706359895,
+      "ratio_p90": 1.3730728529554872,
+      "median_abs_err_pct": 14.275173976214392,
+      "mean_abs_err_pct": 65.49264914733513,
+      "confiance": "haute",
+      "message": "Estimation fiable — le modèle couvre bien ce type de bien dans cette zone."
+    },
+    "duplex_triplex": {
+      "n": 45,
+      "ratio_p10": 0.6484874642355517,
+      "ratio_p25": 0.8200266035879212,
+      "ratio_p50": 0.9247833664175784,
+      "ratio_p75": 1.0578924633322955,
+      "ratio_p90": 1.2480517550343202,
+      "median_abs_err_pct": 15.245728266023775,
+      "mean_abs_err_pct": 24.368203615977016,
+      "confiance": "haute",
+      "message": "Estimation fiable — le modèle couvre bien ce type de bien dans cette zone."
+    },
+    "ferme": {
+      "n": 8,
+      "ratio_p10": 0.30718240361211746,
+      "ratio_p25": 0.3237728950352583,
+      "ratio_p50": 1.2031535380188676,
+      "ratio_p75": 2.4058675745480644,
+      "ratio_p90": 4.277896555498985,
+      "median_abs_err_pct": 77.1462301251858,
+      "mean_abs_err_pct": 112.41712473019605,
+      "confiance": "faible",
+      "message": "Estimation approximative — données insuffisantes pour ce type ou cette zone."
+    },
+    "immeuble": {
+      "n": 29,
+      "ratio_p10": 0.6412779818389619,
+      "ratio_p25": 0.845378969765106,
+      "ratio_p50": 0.9829498346888982,
+      "ratio_p75": 1.3120557013133938,
+      "ratio_p90": 2.119082709035957,
+      "median_abs_err_pct": 23.783723587422383,
+      "mean_abs_err_pct": 35.715255337142786,
+      "confiance": "moyenne",
+      "message": "Estimation correcte — fourchette un peu plus large, zone modérément couverte."
+    },
+    "studio": {
+      "n": 11,
+      "ratio_p10": 0.577330334813364,
+      "ratio_p25": 0.8157933579397515,
+      "ratio_p50": 1.0068706614640217,
+      "ratio_p75": 1.2798186864575154,
+      "ratio_p90": 2.5776359141025447,
+      "median_abs_err_pct": 22.97816826807737,
+      "mean_abs_err_pct": 77.3836196745157,
+      "confiance": "moyenne",
+      "message": "Estimation correcte — fourchette un peu plus large, zone modérément couverte."
+    },
+    "villa_maison": {
+      "n": 425,
+      "ratio_p10": 0.6372154947597336,
+      "ratio_p25": 0.8105790920962979,
+      "ratio_p50": 1.004041695982982,
+      "ratio_p75": 1.275568337935291,
+      "ratio_p90": 1.670370366557024,
+      "median_abs_err_pct": 21.71013444895032,
+      "mean_abs_err_pct": 113.20296992098598,
+      "confiance": "moyenne",
+      "message": "Estimation correcte — fourchette un peu plus large, zone modérément couverte."
+    }
+  },
+  "global": {
+    "n": 945,
+    "ratio_p10": 0.6697259716350188,
+    "ratio_p25": 0.8491374646243826,
+    "ratio_p50": 1.0038582527324253,
+    "ratio_p75": 1.218274798868751,
+    "ratio_p90": 1.502962549272595,
+    "median_abs_err_pct": 17.90117911673107,
+    "mean_abs_err_pct": 84.61321881914125,
+    "confiance": "faible",
+    "message": "Estimation approximative — données insuffisantes pour ce type ou cette zone."
+  },
+  "seuil_prix_bas_tnd": 100000,
+  "message_prix_bas": "Prix estimé inférieur à 100 000 TND — le modèle est peu fiable dans cette zone de prix."
+}

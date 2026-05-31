@@ -1,6 +1,22 @@
 # Fichiers generes a ne pas pusher
 RealEstateAdmin-main/bin/
 RealEstateAdmin-main/obj/
+**/bin/
+**/obj/
+**/bin_temp/
+
+# Environnements / caches Python
+**/.venv/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Dependances front-end
+**/node_modules/
+
+# Fichiers temporaires locaux
+.runlogs/
 
 # Configuration locale de dev
 RealEstateAdmin-main/appsettings.Development.json

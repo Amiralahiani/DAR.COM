@@ -53,6 +53,10 @@ namespace RealEstateAdmin.Services
                 var result = await response.Content.ReadFromJsonAsync<MlProfileResponse>();
                 if (result is null) return null;
 
+                var userDataSource = behavior.PropertyViewsCount > 1 || behavior.ContactAgentClicks > 0
+                    ? "real_db"
+                    : "no_history";
+
                 return new ClientProfile
                 {
                     UserId           = userId,
@@ -62,6 +66,8 @@ namespace RealEstateAdmin.Services
                     PersonaSegment   = result.persona_segment,
                     ClusterId        = result.cluster_id,
                     LastUpdated      = DateTime.TryParse(result.last_updated, out var dt) ? dt : DateTime.UtcNow,
+                    ModelTrainedOn   = result.model_trained_on,
+                    UserDataSource   = userDataSource,
                 };
             }
             catch (Exception ex)
@@ -209,10 +215,7 @@ namespace RealEstateAdmin.Services
                     var budgetCeiling = (decimal)(profile.PredictedBudget * 1.25m);
                     query = query.Where(b => b.Prix <= budgetCeiling);
 
-                    if (profile.PredictedIntent.Contains("LOCATION"))
-                        query = query.Where(b => b.TypeTransaction == "A Louer");
-                    else
-                        query = query.Where(b => b.TypeTransaction == "A Vendre");
+                    query = query.Where(b => b.TypeTransaction == "A Vendre");
 
                     if (behavior.AvgSurfaceViewed > 0)
                     {
@@ -245,7 +248,8 @@ namespace RealEstateAdmin.Services
             string predicted_intent,
             string persona_segment,
             int cluster_id,
-            string last_updated
+            string last_updated,
+            string model_trained_on
         );
     }
 }

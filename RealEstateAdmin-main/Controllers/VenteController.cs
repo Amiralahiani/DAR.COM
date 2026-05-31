@@ -40,7 +40,9 @@ namespace RealEstateAdmin.Controllers
 
         public async Task<IActionResult> Create()
         {
-            var data = await _venteService.GetCreateDataAsync();
+            var currentUser = await _userManager.GetUserAsync(User);
+            var isSuperAdmin = User.IsInRole("SuperAdmin");
+            var data = await _venteService.GetCreateDataAsync(null, currentUser?.Id, isSuperAdmin);
             return View(data);
         }
 
@@ -48,25 +50,26 @@ namespace RealEstateAdmin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(SalesCreateInput input)
         {
+            var currentUser = await _userManager.GetUserAsync(User);
+            var isSuperAdmin = User.IsInRole("SuperAdmin");
+
             if (!ModelState.IsValid)
             {
-                var invalidData = await _venteService.GetCreateDataAsync(input);
+                var invalidData = await _venteService.GetCreateDataAsync(input, currentUser?.Id, isSuperAdmin);
                 return View(invalidData);
             }
 
-            var currentUser = await _userManager.GetUserAsync(User);
             var result = await _venteService.CreateManualAsync(input, currentUser?.Id);
             if (result.Success)
             {
                 TempData["SuccessMessage"] = result.Message;
-                // Le contrat est généré automatiquement pendant la saisie.
                 return RedirectToAction(nameof(Details), new { id = result.Data });
             }
 
             if (result.ErrorCode is ServiceErrorCode.BadRequest or ServiceErrorCode.NotFound or ServiceErrorCode.Validation)
             {
                 ModelState.AddModelError(string.Empty, result.Message ?? "Données invalides.");
-                var data = await _venteService.GetCreateDataAsync(input);
+                var data = await _venteService.GetCreateDataAsync(input, currentUser?.Id, isSuperAdmin);
                 return View(data);
             }
 

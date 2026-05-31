@@ -173,7 +173,7 @@
                                                 item.StatutCommercial == "Vendu"             ? ("bi-check-circle-fill",  "Vendu",               "bg-secondary") :
                                                 item.StatutCommercial == "En cours de vente" ? ("bi-arrow-repeat",       "Vente en cours",      "bg-info text-dark") :
                                                 item.StatutCommercial == "Réservé"           ? ("bi-hourglass-split",    "Réservé",             "bg-warning text-dark") :
-                                                item.PublicationStatus == "Refusé"           ? ("bi-eye-slash-fill",     "Non publié",          "bg-danger") :
+                                                item.PublicationStatus == "Non publié"           ? ("bi-eye-slash-fill",     "Non publié",          "bg-danger") :
                                                 item.PublicationStatus == "En attente"       ? ("bi-clock-fill",         "En attente validation","bg-warning text-dark") :
                                                 item.PublicationStatus == "Publié"           ? ("bi-eye-fill",           "Publié · Disponible", "bg-success") :
                                                                                                ("bi-circle",             item.PublicationStatus, "bg-secondary");
@@ -235,13 +235,6 @@
                                                 <li>
                                                     <form asp-action="SetStatus" asp-route-id="@item.Id" method="post">
                                                         @Html.AntiForgeryToken()
-                                                        <input type="hidden" name="status" value="En attente" />
-                                                        <button type="submit" class="dropdown-item">En attente</button>
-                                                    </form>
-                                                </li>
-                                                <li>
-                                                    <form asp-action="SetStatus" asp-route-id="@item.Id" method="post">
-                                                        @Html.AntiForgeryToken()
                                                         <input type="hidden" name="status" value="Publié" />
                                                         <button type="submit" class="dropdown-item">Publié</button>
                                                     </form>
@@ -249,8 +242,8 @@
                                                 <li>
                                                     <form asp-action="SetStatus" asp-route-id="@item.Id" method="post">
                                                         @Html.AntiForgeryToken()
-                                                        <input type="hidden" name="status" value="Refusé" />
-                                                        <button type="submit" class="dropdown-item text-danger">Refusé</button>
+                                                        <input type="hidden" name="status" value="Non publié" />
+                                                        <button type="submit" class="dropdown-item text-danger">Dépublier</button>
                                                     </form>
                                                 </li>
                                             </ul>
@@ -356,7 +349,7 @@
                                     </div>
                                     <div class="mb-2 d-flex gap-2 flex-wrap">
                                         <span class="badge bg-success">En vente</span>
-                                        <span class="badge @(item.PublicationStatus == "Publié" ? "bg-success" : item.PublicationStatus == "Refusé" ? "bg-danger" : "bg-warning text-dark")">
+                                        <span class="badge @(item.PublicationStatus == "Publié" ? "bg-success" : item.PublicationStatus == "Non publié" ? "bg-danger" : "bg-warning text-dark")">
                                             @item.PublicationStatus
                                         </span>
                                         <span class="badge @(item.StatutCommercial == "Vendu" ? "bg-secondary" : item.StatutCommercial == "Réservé" ? "bg-warning text-dark" : "bg-success")">
@@ -442,7 +435,7 @@
                                     </div>
                                     <div class="mb-2 d-flex gap-2 flex-wrap">
                                         <span class="badge bg-secondary">Acheté</span>
-                                        <span class="badge @(item.PublicationStatus == "Publié" ? "bg-success" : item.PublicationStatus == "Refusé" ? "bg-danger" : "bg-warning text-dark")">
+                                        <span class="badge @(item.PublicationStatus == "Publié" ? "bg-success" : item.PublicationStatus == "Non publié" ? "bg-danger" : "bg-warning text-dark")">
                                             @item.PublicationStatus
                                         </span>
                                         <span class="badge @(item.StatutCommercial == "Vendu" ? "bg-secondary" : item.StatutCommercial == "Réservé" ? "bg-warning text-dark" : "bg-success")">

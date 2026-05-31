@@ -100,9 +100,19 @@ namespace RealEstateAdmin.Services
                 biensQuery = biensQuery.Where(b => b.Surface.HasValue && b.Surface.Value <= filter.SurfaceMax.Value);
             }
 
-            if (!string.IsNullOrWhiteSpace(filter.Statut) && StatusOptions.Contains(filter.Statut))
+            if (!string.IsNullOrWhiteSpace(filter.NatureBien))
             {
-                biensQuery = biensQuery.Where(b => b.StatutCommercial == filter.Statut);
+                biensQuery = biensQuery.Where(b => b.NatureBien == filter.NatureBien);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.EtatBien))
+            {
+                biensQuery = biensQuery.Where(b => b.EtatBien == filter.EtatBien);
+            }
+
+            if (filter.ChambresMin.HasValue)
+            {
+                biensQuery = biensQuery.Where(b => b.NombrePieces.HasValue && b.NombrePieces.Value >= filter.ChambresMin.Value);
             }
 
             if (!string.IsNullOrWhiteSpace(filter.Solde) && filter.Solde.Equals("1"))
@@ -353,7 +363,7 @@ namespace RealEstateAdmin.Services
 
             var targetIds = new HashSet<string>(agentIds, StringComparer.OrdinalIgnoreCase);
             var messages = await _context.Messages
-                .Where(m => m.Statut == "Nouveau"
+                .Where(m => (m.Statut == "Nouveau" || m.Statut == "Accepté")
                     && m.Contenu != null
                     && (m.Contenu.Contains("TYPE=VISITE") || m.Contenu.Contains("TYPE=RDV_AGENT")))
                 .Select(m => new { m.Contenu })

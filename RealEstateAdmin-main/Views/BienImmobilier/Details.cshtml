@@ -13,7 +13,7 @@
         Model.StatutCommercial == "Vendu"             ? ("bi-check-circle-fill", "Vendu",                "bg-secondary") :
         Model.StatutCommercial == "En cours de vente" ? ("bi-arrow-repeat",      "Vente en cours",       "bg-info text-dark") :
         Model.StatutCommercial == "Réservé"           ? ("bi-hourglass-split",   "Réservé",              "bg-warning text-dark") :
-        Model.PublicationStatus == "Refusé"           ? ("bi-eye-slash-fill",    "Non publié",           "bg-danger") :
+        Model.PublicationStatus == "Non publié"           ? ("bi-eye-slash-fill",    "Non publié",           "bg-danger") :
         Model.PublicationStatus == "En attente"       ? ("bi-clock-fill",        "En attente validation","bg-warning text-dark") :
         Model.PublicationStatus == "Publié"           ? ("bi-eye-fill",          "Publié · Disponible",  "bg-success") :
                                                         ("bi-circle",            Model.PublicationStatus,"bg-secondary");

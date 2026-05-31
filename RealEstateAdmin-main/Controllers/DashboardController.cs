@@ -59,6 +59,20 @@ namespace RealEstateAdmin.Controllers
             ViewBag.MyPurchases = data.MyPurchases;
             ViewBag.MyTransactionAmount = data.MyTransactionAmount;
 
+            if (isAdmin && currentUser != null)
+            {
+                // Annonces : tâche partagée entre tous les admins → compteur global
+                ViewBag.AnnoncesEnAttente = await _db.Annonces.CountAsync(a => a.Statut == "En attente");
+
+                // Visites & RDV : uniquement ceux assignés à CET admin
+                var assignedNeedle = $"ASSIGNED_TO_USER_ID={currentUser.Id}";
+                ViewBag.DemandesEnAttente = await _db.Messages.CountAsync(m =>
+                    m.Statut == "Nouveau" &&
+                    m.Contenu != null &&
+                    (m.Contenu.Contains("TYPE=VISITE") || m.Contenu.Contains("TYPE=RDV_AGENT")) &&
+                    m.Contenu.Contains(assignedNeedle));
+            }
+
             // Données spécifiques au client
             if (!isAdmin && currentUser != null)
             {

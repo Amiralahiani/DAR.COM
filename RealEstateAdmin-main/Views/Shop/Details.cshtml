@@ -8,7 +8,8 @@
     var hasDiscount  = Model.DiscountPercent > 0;
     var displayPrice = hasDiscount ? Model.Prix * (100 - Model.DiscountPercent) / 100m : Model.Prix;
     var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-    var canInteract   = currentUserId is not null && Model.UserId != currentUserId;
+    var isAdminOrSuperAdmin = User.IsInRole("Admin") || User.IsInRole("SuperAdmin");
+    var canInteract     = currentUserId is not null && Model.UserId != currentUserId && !isAdminOrSuperAdmin;
     var canReserveVisit = canInteract && Model.StatutCommercial == "Disponible";
     var canInterest     = canInteract && Model.StatutCommercial != "Vendu";
 }

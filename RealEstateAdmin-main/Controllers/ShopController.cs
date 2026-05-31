@@ -15,17 +15,20 @@ namespace RealEstateAdmin.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMLService _mlService;
         private readonly ApplicationDbContext _context;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public ShopController(
             IShopService shopService,
             UserManager<ApplicationUser> userManager,
             IMLService mlService,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            IHttpClientFactory httpClientFactory)
         {
             _shopService = shopService;
             _userManager = userManager;
             _mlService = mlService;
             _context = context;
+            _httpClientFactory = httpClientFactory;
         }
 
         // GET: Shop
@@ -36,10 +39,12 @@ namespace RealEstateAdmin.Controllers
             string? adresse,
             int? surfaceMin,
             int? surfaceMax,
-            string? statut,
+            string? natureBien,
+            string? etatBien,
+            int? chambresMin,
             string? solde)
         {
-            var filter = BuildFilter(titre, prixMin, prixMax, adresse, surfaceMin, surfaceMax, statut, solde);
+            var filter = BuildFilter(titre, prixMin, prixMax, adresse, surfaceMin, surfaceMax, natureBien, etatBien, chambresMin, solde);
             var data = await _shopService.GetIndexDataAsync(filter);
 
             var currentUser = await _userManager.GetUserAsync(User);
@@ -64,14 +69,95 @@ namespace RealEstateAdmin.Controllers
             string? adresse,
             int? surfaceMin,
             int? surfaceMax,
-            string? statut)
+            string? natureBien,
+            string? etatBien,
+            int? chambresMin)
         {
-            var filter = BuildFilter(titre, prixMin, prixMax, adresse, surfaceMin, surfaceMax, statut, "1");
+            var filter = BuildFilter(titre, prixMin, prixMax, adresse, surfaceMin, surfaceMax, natureBien, etatBien, chambresMin, "1");
 
             var data = await _shopService.GetSoldeDataAsync(filter);
 
             return View(data);
         }
+
+        // GET: Shop/Map
+        [HttpGet]
+        public async Task<IActionResult> Map()
+        {
+            var biens = await _context.Biens
+                .Where(b => b.IsPublished && b.PublicationStatus == "Publié")
+                .ToListAsync();
+
+            await GeocodesMissingAsync(biens);
+
+            var vm = biens.Select(b => new {
+                b.Id, b.Titre, b.Adresse,
+                b.Prix, b.Surface, b.NombrePieces,
+                b.ImageUrl, b.Latitude, b.Longitude,
+                b.NatureBien, b.DiscountPercent
+            }).ToList();
+
+            return View(vm);
+        }
+
+        // GET: Shop/MapSolde
+        [HttpGet]
+        public async Task<IActionResult> MapSolde()
+        {
+            var biens = await _context.Biens
+                .Where(b => b.IsPublished && b.PublicationStatus == "Publié" && b.DiscountPercent > 0)
+                .ToListAsync();
+
+            await GeocodesMissingAsync(biens);
+
+            var vm = biens.Select(b => new {
+                b.Id, b.Titre, b.Adresse,
+                b.Prix, b.Surface, b.NombrePieces,
+                b.ImageUrl, b.Latitude, b.Longitude,
+                b.NatureBien, b.DiscountPercent
+            }).ToList();
+
+            ViewBag.SoldeOnly = true;
+            return View("Map", vm);
+        }
+
+        private async Task GeocodesMissingAsync(List<RealEstateAdmin.Models.BienImmobilier> biens)
+        {
+            var sans = biens.Where(b => !b.Latitude.HasValue && !string.IsNullOrWhiteSpace(b.Adresse)).ToList();
+            if (!sans.Any()) return;
+
+            var http = _httpClientFactory.CreateClient();
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("RealEstateAdmin/1.0");
+            http.Timeout = TimeSpan.FromSeconds(5);
+
+            bool anyUpdated = false;
+            foreach (var b in sans)
+            {
+                try
+                {
+                    var url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q="
+                              + System.Net.WebUtility.UrlEncode(b.Adresse + ", Tunisie");
+                    var json = await http.GetStringAsync(url);
+                    var arr  = System.Text.Json.JsonSerializer.Deserialize<List<NominatimGeo>>(json);
+                    if (arr != null && arr.Count > 0
+                        && double.TryParse(arr[0].lat, System.Globalization.NumberStyles.Any,
+                                           System.Globalization.CultureInfo.InvariantCulture, out var lat)
+                        && double.TryParse(arr[0].lon, System.Globalization.NumberStyles.Any,
+                                           System.Globalization.CultureInfo.InvariantCulture, out var lon))
+                    {
+                        b.Latitude  = lat;
+                        b.Longitude = lon;
+                        anyUpdated  = true;
+                    }
+                    await Task.Delay(300); // respecter le rate-limit Nominatim
+                }
+                catch { /* non bloquant */ }
+            }
+
+            if (anyUpdated) await _context.SaveChangesAsync();
+        }
+
+        private record NominatimGeo(string lat, string lon);
 
         // GET: Shop/Details/5
         [HttpGet]
@@ -107,6 +193,7 @@ namespace RealEstateAdmin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ExpressInterest(int id)
         {
+            if (IsAdminUser()) return Forbid();
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return RedirectToAction("Login", "Account");
 
@@ -145,6 +232,7 @@ namespace RealEstateAdmin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ReserveVisit(int id, string visitSlot)
         {
+            if (IsAdminUser()) return Forbid();
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return RedirectToAction("Login", "Account");
 
@@ -188,6 +276,7 @@ namespace RealEstateAdmin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RequestMeeting(int id, string meetingSlot)
         {
+            if (IsAdminUser()) return Forbid();
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return RedirectToAction("Login", "Account");
 
@@ -232,21 +321,28 @@ namespace RealEstateAdmin.Controllers
             string? adresse,
             int? surfaceMin,
             int? surfaceMax,
-            string? statut,
+            string? natureBien,
+            string? etatBien,
+            int? chambresMin,
             string? solde)
         {
             return new ShopFilter
             {
-                Titre = titre,
-                PrixMin = prixMin,
-                PrixMax = prixMax,
-                Adresse = adresse,
+                Titre      = titre,
+                PrixMin    = prixMin,
+                PrixMax    = prixMax,
+                Adresse    = adresse,
                 SurfaceMin = surfaceMin,
                 SurfaceMax = surfaceMax,
-                Statut = statut,
-                Solde = solde
+                NatureBien = natureBien,
+                EtatBien   = etatBien,
+                ChambresMin = chambresMin,
+                Solde      = solde
             };
         }
+
+        private bool IsAdminUser() =>
+            User.IsInRole("Admin") || User.IsInRole("SuperAdmin");
 
         private IActionResult HandleResult(ServiceResult result)
         {

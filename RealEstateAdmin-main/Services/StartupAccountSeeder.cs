@@ -277,7 +277,7 @@ namespace RealEstateAdmin.Services
         {
             if (!isPublished)
             {
-                return "Refusé";
+                return "Non publié";
             }
 
             if (string.Equals(publicationStatus, "En attente", StringComparison.OrdinalIgnoreCase))
@@ -285,9 +285,9 @@ namespace RealEstateAdmin.Services
                 return "En attente";
             }
 
-            if (string.Equals(publicationStatus, "Refusé", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(publicationStatus, "Non publié", StringComparison.OrdinalIgnoreCase))
             {
-                return "Refusé";
+                return "Non publié";
             }
 
             return "Publié";

@@ -28,15 +28,15 @@
                 </div>
 
                 <div class="mb-3">
-                    <label asp-for="Password" class="form-label"></label>
-                    <input asp-for="Password" class="form-control" type="password" />
+                    <label asp-for="Password" class="form-label">Nouveau mot de passe</label>
+                    <input asp-for="Password" class="form-control" type="password" autocomplete="new-password" />
                     <small class="text-muted d-block">Laissez vide pour conserver le mot de passe actuel.</small>
                     <span asp-validation-for="Password" class="text-danger"></span>
                 </div>
 
                 <div class="mb-3">
-                    <label asp-for="ConfirmPassword" class="form-label"></label>
-                    <input asp-for="ConfirmPassword" class="form-control" type="password" />
+                    <label asp-for="ConfirmPassword" class="form-label">Confirmer le mot de passe</label>
+                    <input asp-for="ConfirmPassword" class="form-control" type="password" autocomplete="new-password" />
                     <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
                 </div>
 

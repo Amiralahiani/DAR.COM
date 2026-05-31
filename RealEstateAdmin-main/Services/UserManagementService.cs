@@ -134,6 +134,19 @@ namespace RealEstateAdmin.Services
                 return ServiceResult.Fail(ServiceErrorCode.BadRequest, "ID invalide.");
             }
 
+            // Vérifier que la cible est bien un compte Admin (pas SuperAdmin, pas Utilisateur)
+            var targetUser = await _userManager.FindByIdAsync(id);
+            if (targetUser != null)
+            {
+                var targetRoles = await _userManager.GetRolesAsync(targetUser);
+                var targetRole = ResolvePrimaryRole(targetRoles);
+                if (targetRole != "Admin")
+                {
+                    return ServiceResult.Fail(ServiceErrorCode.Forbidden,
+                        "Le SuperAdmin ne peut modifier que les comptes Admin.");
+                }
+            }
+
             if (!InternalAllowedRoles.Contains(model.RoleName))
             {
                 return ServiceResult.Fail(ServiceErrorCode.Validation, "Rôle invalide.");
@@ -155,6 +168,7 @@ namespace RealEstateAdmin.Services
                 return ServiceResult.Fail(ServiceErrorCode.Validation, string.Join(" | ", updateResult.Errors.Select(e => e.Description)));
             }
 
+            // Le SuperAdmin peut changer le mot de passe de ses employés (comptes admin/agent)
             if (!string.IsNullOrWhiteSpace(model.Password))
             {
                 var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);

@@ -1,6 +1,170 @@
-﻿@{
-    ViewData["Title"] = "Privacy Policy";
+@{
+    ViewData["Title"] = "Politique de confidentialité";
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<div class="container py-5" style="max-width:860px;">
+
+    <div class="mb-5">
+        <h1 class="text-gradient fw-bold">
+            <i class="bi bi-shield-lock me-2"></i> Politique de confidentialité
+        </h1>
+        <p class="text-muted">Dernière mise à jour : @DateTime.Now.ToString("MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))</p>
+        <hr />
+        <p class="lead">
+            DAR.COM s'engage à protéger la vie privée de ses utilisateurs. Cette politique décrit
+            quelles données nous collectons, pourquoi nous les collectons et comment nous les utilisons.
+        </p>
+    </div>
+
+    <!-- 1 -->
+    <div class="mb-5">
+        <h4 class="fw-bold mb-3"><span class="text-gradient">1.</span> Données collectées</h4>
+        <p>Lors de votre utilisation de la plateforme DAR.COM, nous collectons les données suivantes :</p>
+        <ul class="list-group list-group-flush mb-3">
+            <li class="list-group-item"><i class="bi bi-person-circle text-primary me-2"></i><strong>Données d'identité</strong> — nom, prénom, adresse e-mail</li>
+            <li class="list-group-item"><i class="bi bi-house-door text-primary me-2"></i><strong>Données de bien immobilier</strong> — adresse, surface, photos, prix des biens que vous publiez</li>
+            <li class="list-group-item"><i class="bi bi-calendar-check text-primary me-2"></i><strong>Données de contact</strong> — demandes de visite, rendez-vous, messages envoyés aux agents</li>
+            <li class="list-group-item"><i class="bi bi-bar-chart text-primary me-2"></i><strong>Données de navigation</strong> — biens consultés, durée de session, favoris — utilisés uniquement pour améliorer nos recommandations</li>
+        </ul>
+        <p class="text-muted small">Nous ne collectons aucune donnée de paiement directement. Toute transaction financière est gérée en dehors de la plateforme.</p>
+    </div>
+
+    <!-- 2 -->
+    <div class="mb-5">
+        <h4 class="fw-bold mb-3"><span class="text-gradient">2.</span> Utilisation des données</h4>
+        <p>Vos données sont utilisées exclusivement pour :</p>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card border-0 bg-light h-100 p-3">
+                    <i class="bi bi-search text-primary mb-2 fs-4"></i>
+                    <strong>Recommandations personnalisées</strong>
+                    <p class="small text-muted mb-0 mt-1">Notre moteur IA analyse votre comportement de navigation pour vous proposer des biens adaptés à votre profil.</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 bg-light h-100 p-3">
+                    <i class="bi bi-envelope text-primary mb-2 fs-4"></i>
+                    <strong>Communication</strong>
+                    <p class="small text-muted mb-0 mt-1">Confirmation de vos visites, réponses à vos demandes de rendez-vous et notifications importantes.</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 bg-light h-100 p-3">
+                    <i class="bi bi-graph-up text-primary mb-2 fs-4"></i>
+                    <strong>Amélioration du service</strong>
+                    <p class="small text-muted mb-0 mt-1">Analyse agrégée et anonymisée pour améliorer les fonctionnalités de la plateforme.</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 bg-light h-100 p-3">
+                    <i class="bi bi-shield-check text-primary mb-2 fs-4"></i>
+                    <strong>Sécurité</strong>
+                    <p class="small text-muted mb-0 mt-1">Détection des activités frauduleuses et protection de votre compte.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3 -->
+    <div class="mb-5">
+        <h4 class="fw-bold mb-3"><span class="text-gradient">3.</span> Intelligence artificielle & profilage</h4>
+        <p>
+            DAR.COM utilise un moteur d'intelligence artificielle pour analyser votre comportement
+            (biens consultés, favoris, durée de session) afin d'estimer votre profil d'acheteur
+            et vous proposer des recommandations pertinentes.
+        </p>
+        <div class="alert alert-info d-flex gap-3 align-items-start">
+            <i class="bi bi-info-circle-fill fs-5 mt-1 flex-shrink-0"></i>
+            <div>
+                Ce profilage est <strong>purement indicatif</strong> et ne conditionne en aucun cas
+                l'accès aux biens ou aux services. Aucune décision automatisée ayant un impact
+                juridique n'est prise sur cette base.
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 -->
+    <div class="mb-5">
+        <h4 class="fw-bold mb-3"><span class="text-gradient">4.</span> Partage des données</h4>
+        <p>Nous ne vendons, ne louons ni ne partageons vos données personnelles avec des tiers, à l'exception des cas suivants :</p>
+        <ul>
+            <li>Agents immobiliers de notre réseau, uniquement dans le cadre de vos demandes de visite ou de rendez-vous</li>
+            <li>Obligations légales en cas de demande des autorités compétentes</li>
+        </ul>
+    </div>
+
+    <!-- 5 -->
+    <div class="mb-5">
+        <h4 class="fw-bold mb-3"><span class="text-gradient">5.</span> Conservation des données</h4>
+        <p>
+            Vos données sont conservées pendant la durée de votre utilisation de la plateforme.
+            En cas de suppression de votre compte, vos données personnelles sont effacées dans un
+            délai de <strong>30 jours</strong>, à l'exception des données requises par la loi.
+        </p>
+    </div>
+
+    <!-- 6 -->
+    <div class="mb-5">
+        <h4 class="fw-bold mb-3"><span class="text-gradient">6.</span> Vos droits</h4>
+        <p>Conformément à la législation applicable, vous disposez des droits suivants :</p>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Droit</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><i class="bi bi-eye me-1"></i> Accès</td><td>Consulter l'ensemble des données que nous détenons sur vous</td></tr>
+                    <tr><td><i class="bi bi-pencil me-1"></i> Rectification</td><td>Corriger toute information inexacte vous concernant</td></tr>
+                    <tr><td><i class="bi bi-trash me-1"></i> Suppression</td><td>Demander l'effacement de vos données personnelles</td></tr>
+                    <tr><td><i class="bi bi-slash-circle me-1"></i> Opposition</td><td>Vous opposer au traitement de vos données à des fins de profilage</td></tr>
+                    <tr><td><i class="bi bi-download me-1"></i> Portabilité</td><td>Recevoir vos données dans un format structuré et lisible par machine</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="text-muted small">
+            Pour exercer ces droits, contactez-nous à :
+            <a href="mailto:contact@dar.com" class="text-decoration-none">contact@dar.com</a>
+        </p>
+    </div>
+
+    <!-- 7 -->
+    <div class="mb-5">
+        <h4 class="fw-bold mb-3"><span class="text-gradient">7.</span> Sécurité</h4>
+        <p>
+            Nous mettons en œuvre des mesures techniques et organisationnelles appropriées pour
+            protéger vos données contre tout accès non autorisé, perte ou divulgation :
+            chiffrement des mots de passe, connexions sécurisées (HTTPS) et accès restreint
+            aux données sensibles.
+        </p>
+    </div>
+
+    <!-- 8 -->
+    <div class="mb-4">
+        <h4 class="fw-bold mb-3"><span class="text-gradient">8.</span> Contact</h4>
+        <p>
+            Pour toute question relative à cette politique ou pour exercer vos droits, contactez
+            notre responsable de la protection des données :
+        </p>
+        <div class="card border-0 bg-light p-4">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#d6a547,#c0563a);display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-envelope-fill text-white fs-5"></i>
+                </div>
+                <div>
+                    <div class="fw-bold">DAR.COM — Service Confidentialité</div>
+                    <a href="mailto:contact@dar.com" class="text-decoration-none">contact@dar.com</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <hr />
+    <p class="text-muted small text-center">
+        DAR.COM se réserve le droit de modifier cette politique à tout moment.
+        Toute modification sera notifiée par e-mail ou via la plateforme.
+    </p>
+
+</div>

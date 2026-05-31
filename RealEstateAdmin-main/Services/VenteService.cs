@@ -94,23 +94,33 @@ namespace RealEstateAdmin.Services
             };
         }
 
-        public async Task<SalesCreateData> GetCreateDataAsync(SalesCreateInput? input = null)
+        public async Task<SalesCreateData> GetCreateDataAsync(SalesCreateInput? input = null, string? currentUserId = null, bool isSuperAdmin = false)
         {
-            var bienRows = await _context.Biens
-                .OrderBy(b => b.Titre)
-                .ToListAsync();
+            var query = _context.Biens
+                .Where(b => b.StatutCommercial != "Vendu")
+                .AsQueryable();
+
+            if (!isSuperAdmin && !string.IsNullOrWhiteSpace(currentUserId))
+            {
+                query = query.Where(b =>
+                    b.UserId == currentUserId ||
+                    b.PublicationValidatedByAdminId == currentUserId);
+            }
+
+            var bienRows = await query.OrderBy(b => b.Titre).ToListAsync();
 
             var biens = bienRows
                 .Select(b => new SalesLookupOption
                 {
                     Value = b.Id.ToString(),
-                    Label = $"{b.Titre} ({b.Prix:N2} DT)"
+                    Label = $"{b.Titre} — {b.StatutCommercial} ({b.Prix:N2} DT)"
                 })
                 .ToList();
 
-            var usersRows = await _userManager.Users
+            // Uniquement les clients (rôle Utilisateur) — exclure Admin et SuperAdmin
+            var usersRows = (await _userManager.GetUsersInRoleAsync("Utilisateur"))
                 .OrderBy(u => u.Email)
-                .ToListAsync();
+                .ToList();
 
             var users = usersRows
                 .Select(u => new SalesLookupOption
@@ -259,7 +269,7 @@ namespace RealEstateAdmin.Services
             // Démarrage du process de vente: retirer immédiatement le bien du shop.
             bien.StatutCommercial = "En cours de vente";
             bien.IsPublished = false;
-            bien.PublicationStatus = "Refusé";
+            bien.PublicationStatus = "Non publié";
             _context.Update(bien);
 
             _context.Sales.Add(sale);
@@ -322,7 +332,7 @@ namespace RealEstateAdmin.Services
                     sale.BienImmobilier.TypeTransaction = "Acheté";
                     // Optionally unpublish after sale
                     sale.BienImmobilier.IsPublished = false;
-                    sale.BienImmobilier.PublicationStatus = "Refusé";
+                    sale.BienImmobilier.PublicationStatus = "Non publié";
                     // Update both sale and bien in same transaction
                     _context.Update(sale);
                     _context.Update(sale.BienImmobilier);
@@ -522,7 +532,7 @@ namespace RealEstateAdmin.Services
             {
                 sale.BienImmobilier.StatutCommercial = "En cours de vente";
                 sale.BienImmobilier.IsPublished = false;
-                sale.BienImmobilier.PublicationStatus = "Refusé";
+                sale.BienImmobilier.PublicationStatus = "Non publié";
                 _context.Update(sale.BienImmobilier);
             }
 
@@ -584,7 +594,7 @@ namespace RealEstateAdmin.Services
             {
                 bien.StatutCommercial = "Vendu";
                 bien.IsPublished = false;
-                bien.PublicationStatus = "Refusé";
+                bien.PublicationStatus = "Non publié";
                 _context.Update(bien);
             }
 
@@ -672,7 +682,7 @@ namespace RealEstateAdmin.Services
                 {
                     sale.BienImmobilier.StatutCommercial = "Vendu";
                     sale.BienImmobilier.IsPublished = false;
-                    sale.BienImmobilier.PublicationStatus = "Refusé";
+                    sale.BienImmobilier.PublicationStatus = "Non publié";
                     _context.Update(sale.BienImmobilier);
                 }
             }

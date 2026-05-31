@@ -73,7 +73,9 @@ namespace RealEstateAdmin.Services
         public string? Adresse { get; set; }
         public int? SurfaceMin { get; set; }
         public int? SurfaceMax { get; set; }
-        public string? Statut { get; set; }
+        public string? NatureBien { get; set; }
+        public string? EtatBien { get; set; }
+        public int? ChambresMin { get; set; }
         public string? Solde { get; set; }
     }
 

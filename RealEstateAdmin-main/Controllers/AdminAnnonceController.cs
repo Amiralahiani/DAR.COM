@@ -108,6 +108,9 @@ namespace RealEstateAdmin.Controllers
                     bien.Images.Add(new BienImage { Url = photo.Url });
             }
 
+            // Géocodage automatique depuis "Delegation, Gouvernorat"
+            await GeocodeAsync(bien);
+
             _db.Biens.Add(bien);
             await _db.SaveChangesAsync();
 
@@ -160,6 +163,38 @@ namespace RealEstateAdmin.Controllers
                 };
             return $"{type} {a.SurfaceM2} m² — {a.Delegation}, {a.Gouvernorat}";
         }
+
+        private async Task GeocodeAsync(BienImmobilier bien)
+        {
+            if (bien.Latitude.HasValue && bien.Longitude.HasValue) return;
+            if (string.IsNullOrWhiteSpace(bien.Adresse)) return;
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("RealEstateAdmin/1.0");
+                client.Timeout = TimeSpan.FromSeconds(5);
+
+                var url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q="
+                          + System.Net.WebUtility.UrlEncode(bien.Adresse + ", Tunisie");
+
+                var json = await client.GetStringAsync(url);
+                var arr  = System.Text.Json.JsonSerializer.Deserialize<List<NominatimResult>>(json);
+
+                if (arr != null && arr.Count > 0
+                    && double.TryParse(arr[0].lat, System.Globalization.NumberStyles.Any,
+                                       System.Globalization.CultureInfo.InvariantCulture, out var lat)
+                    && double.TryParse(arr[0].lon, System.Globalization.NumberStyles.Any,
+                                       System.Globalization.CultureInfo.InvariantCulture, out var lon))
+                {
+                    bien.Latitude  = lat;
+                    bien.Longitude = lon;
+                }
+            }
+            catch { /* géocodage non bloquant */ }
+        }
+
+        private record NominatimResult(string lat, string lon);
 
         private async Task TrySendPublicationToPriceModelAsync(Annonce annonce)
         {

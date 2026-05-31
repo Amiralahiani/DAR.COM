@@ -20,6 +20,6 @@ namespace RealEstateAdmin.Services
         IReadOnlyList<string> TypeTransactions { get; }
         IReadOnlyList<string> CommercialStatuses { get; }
         IReadOnlyList<string> PublicationStatuses { get; }
-        Task<IReadOnlyList<BienImmobilier>> GetMapDataAsync();
+        Task<IReadOnlyList<BienImmobilier>> GetMapDataAsync(string? currentUserId, bool hasAdminAccess);
     }
 }

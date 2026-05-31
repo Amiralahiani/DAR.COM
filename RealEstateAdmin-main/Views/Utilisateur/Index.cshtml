@@ -98,10 +98,14 @@
                                     @if (isSuperAdmin)
                                     {
                                         var canToggleSuspension = item.UserId != currentUserId && item.CurrentRole != "SuperAdmin";
+                                        var canEdit = item.CurrentRole == "Admin";
 
-                                        <a asp-action="Edit" asp-route-id="@item.UserId" class="btn btn-sm btn-warning">
-                                            <i class="bi bi-pencil"></i> Modifier
-                                        </a>
+                                        @if (canEdit)
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@item.UserId" class="btn btn-sm btn-warning">
+                                                <i class="bi bi-pencil"></i> Modifier
+                                            </a>
+                                        }
                                         @if (canToggleSuspension)
                                         {
                                             <form asp-action="ToggleSuspension" method="post" class="d-inline">
@@ -112,9 +116,12 @@
                                                 </button>
                                             </form>
                                         }
-                                        <a asp-action="Delete" asp-route-id="@item.UserId" class="btn btn-sm btn-danger">
-                                            <i class="bi bi-trash"></i> Supprimer
-                                        </a>
+                                        @if (item.CurrentRole == "Admin" && item.UserId != currentUserId)
+                                        {
+                                            <a asp-action="Delete" asp-route-id="@item.UserId" class="btn btn-sm btn-danger">
+                                                <i class="bi bi-trash"></i> Supprimer
+                                            </a>
+                                        }
                                     }
                                 </td>
                             </tr>

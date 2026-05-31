@@ -66,7 +66,8 @@ namespace RealEstateAdmin.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Map()
         {
-            var biens = await _bienService.GetMapDataAsync();
+            var currentUser = await _userManager.GetUserAsync(User);
+            var biens = await _bienService.GetMapDataAsync(currentUser?.Id, HasAdminAccess());
             return View(biens);
         }
 

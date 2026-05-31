@@ -23,17 +23,17 @@
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="stat-card success">
-                        <div class="mb-3"><i class="bi bi-cash-coin icon-stat-xl icon-emerald"></i></div>
-                        <h2 class="stat-number">@ViewBag.AvgPrice</h2>
-                        <p class="stat-label">Prix moyen</p>
+                    <div class="stat-card warning">
+                        <div class="mb-3"><i class="bi bi-megaphone icon-stat-xl icon-terracotta"></i></div>
+                        <h2 class="stat-number">@(ViewBag.AnnoncesEnAttente ?? 0)</h2>
+                        <p class="stat-label">Annonces à valider</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="stat-card warning">
-                        <div class="mb-3"><i class="bi bi-aspect-ratio icon-stat-xl icon-terracotta"></i></div>
-                        <h2 class="stat-number">@ViewBag.AvgPricePerM2</h2>
-                        <p class="stat-label">Prix moyen / m²</p>
+                    <div class="stat-card success">
+                        <div class="mb-3"><i class="bi bi-calendar-check icon-stat-xl icon-emerald"></i></div>
+                        <h2 class="stat-number">@(ViewBag.DemandesEnAttente ?? 0)</h2>
+                        <p class="stat-label">Mes visites & RDV en attente</p>
                     </div>
                 </div>
             </div>

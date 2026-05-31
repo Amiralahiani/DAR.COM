@@ -10,9 +10,9 @@ namespace RealEstateAdmin.Services
 {
     public class BienImmobilierService : IBienImmobilierService
     {
-        private static readonly string[] InternalPublicationStatuses = { "En attente", "Publié", "Refusé" };
-        private static readonly string[] InternalCommercialStatuses = { "Disponible", "Réservé", "Vendu" };
-        private static readonly string[] InternalTypeTransactions = { "A Vendre", "A Louer", "Acheté" };
+        private static readonly string[] InternalPublicationStatuses = { "Publié", "Non publié" };
+        private static readonly string[] InternalCommercialStatuses = { "Disponible", "Réservé", "En cours de vente", "Vendu" };
+        private static readonly string[] InternalTypeTransactions = { "A Vendre", "Acheté" };
 
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
@@ -195,17 +195,17 @@ namespace RealEstateAdmin.Services
                 biens = biens.Where(b => b.Surface.HasValue && b.Surface >= filter.SurfaceMin.Value);
             }
 
-            if (!string.IsNullOrWhiteSpace(filter.TypeTransaction) && InternalTypeTransactions.Contains(filter.TypeTransaction))
+            if (!string.IsNullOrWhiteSpace(filter.TypeTransaction))
             {
                 biens = biens.Where(b => b.TypeTransaction == filter.TypeTransaction);
             }
 
-            if (!string.IsNullOrWhiteSpace(filter.StatutCommercial) && InternalCommercialStatuses.Contains(filter.StatutCommercial))
+            if (!string.IsNullOrWhiteSpace(filter.StatutCommercial))
             {
                 biens = biens.Where(b => b.StatutCommercial == filter.StatutCommercial);
             }
 
-            if (!string.IsNullOrWhiteSpace(filter.PublicationStatus) && InternalPublicationStatuses.Contains(filter.PublicationStatus))
+            if (!string.IsNullOrWhiteSpace(filter.PublicationStatus))
             {
                 biens = biens.Where(b => b.PublicationStatus == filter.PublicationStatus);
             }
@@ -365,11 +365,14 @@ namespace RealEstateAdmin.Services
             return ServiceResult.Ok();
         }
 
-        public async Task<IReadOnlyList<BienImmobilier>> GetMapDataAsync()
+        public async Task<IReadOnlyList<BienImmobilier>> GetMapDataAsync(string? currentUserId, bool hasAdminAccess)
         {
-            return await _context.Biens
-                .Where(b => b.IsPublished)
-                .ToListAsync();
+            var query = _context.Biens.Where(b => b.IsPublished);
+
+            if (!hasAdminAccess && !string.IsNullOrWhiteSpace(currentUserId))
+                query = query.Where(b => b.UserId == currentUserId);
+
+            return await query.ToListAsync();
         }
 
         public async Task<ServiceResult> UpdateAsync(int id, BienImmobilier bienImmobilier, string? currentUserId, bool hasAdminAccess)
@@ -531,7 +534,7 @@ namespace RealEstateAdmin.Services
             }
 
             bienImmobilier.IsPublished = !bienImmobilier.IsPublished;
-            bienImmobilier.PublicationStatus = bienImmobilier.IsPublished ? "Publié" : "Refusé";
+            bienImmobilier.PublicationStatus = bienImmobilier.IsPublished ? "Publié" : "Non publié";
             await ApplyValidatorOnPublicationDecisionAsync(bienImmobilier, actorUserId);
             _context.Update(bienImmobilier);
             await _context.SaveChangesAsync();
@@ -650,7 +653,7 @@ namespace RealEstateAdmin.Services
             }
 
             if (!string.Equals(bienImmobilier.PublicationStatus, "Publié", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(bienImmobilier.PublicationStatus, "Refusé", StringComparison.OrdinalIgnoreCase))
+                && !string.Equals(bienImmobilier.PublicationStatus, "Non publié", StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }

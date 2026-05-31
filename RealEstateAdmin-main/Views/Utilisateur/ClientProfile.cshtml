@@ -21,64 +21,61 @@
         border-bottom: 1px solid #2d3f55;
         padding: 1.5rem;
     }
+    /* Override Bootstrap text-muted sur fond sombre */
+    .ml-card .text-muted,
+    .ml-section .text-muted { color: #94a3b8 !important; }
+    .ml-card .bi.text-muted  { color: #7890a8 !important; }
+    .ml-card small           { color: #94a3b8; }
+
     .score-ring {
-        width: 110px;
-        height: 110px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-        font-size: 2rem;
-        font-weight: 800;
-        border: 4px solid;
+        width: 110px; height: 110px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        flex-direction: column; font-size: 2rem; font-weight: 800; border: 4px solid;
     }
     .score-ring.hot   { border-color: #ef4444; color: #ef4444; background: #ef444415; }
     .score-ring.warm  { border-color: #f59e0b; color: #f59e0b; background: #f59e0b15; }
-    .score-ring.cold  { border-color: #64748b; color: #94a3b8; background: #64748b15; }
+    .score-ring.cold  { border-color: #94a3b8; color: #94a3b8; background: #64748b15; }
+
     .metric-row {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.6rem 0;
-        border-bottom: 1px solid #2d3f5580;
+        display: flex; align-items: center; gap: 0.75rem;
+        padding: 0.6rem 0; border-bottom: 1px solid #2d3f5580;
     }
     .metric-row:last-child { border-bottom: none; }
     .metric-label { color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .05em; min-width: 140px; }
     .metric-value { color: #e2e8f0; font-weight: 600; font-size: 0.95rem; }
     .metric-bar-wrap { flex: 1; background: #1e3a50; border-radius: 6px; height: 6px; overflow: hidden; }
     .metric-bar { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #3b82f6, #b8872f); }
+
     .intent-badge {
-        display: inline-block;
-        padding: .35em .75em;
-        border-radius: 999px;
-        font-size: .8rem;
-        font-weight: 700;
-        letter-spacing: .04em;
+        display: inline-block; padding: .35em .75em;
+        border-radius: 999px; font-size: .8rem; font-weight: 700; letter-spacing: .04em;
     }
-    .intent-achat  { background: #ef444420; color: #ef4444; border: 1px solid #ef444450; }
-    .intent-location { background: #f59e0b20; color: #f59e0b; border: 1px solid #f59e0b50; }
-    .intent-curiosite { background: #64748b20; color: #94a3b8; border: 1px solid #64748b50; }
+    .intent-achat     { background: #ef444425; color: #ff8080; border: 1px solid #ef444450; }
+    .intent-location  { background: #f59e0b25; color: #fbbf24; border: 1px solid #f59e0b50; }
+    .intent-curiosite { background: #64748b25; color: #94a3b8; border: 1px solid #64748b50; }
+
     .signal-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: .35rem;
-        background: #1e3a50;
-        border: 1px solid #2d4f6a;
-        border-radius: 8px;
-        padding: .3rem .65rem;
-        font-size: .8rem;
-        color: #94a3b8;
+        display: inline-flex; align-items: center; gap: .35rem;
+        background: #1e3a50; border: 1px solid #2d4f6a;
+        border-radius: 8px; padding: .3rem .65rem;
+        font-size: .8rem; color: #94a3b8;
     }
     .signal-chip span { color: #e2e8f0; font-weight: 600; }
-    .unavailable-banner {
-        background: #1e293b;
-        border: 1px dashed #475569;
-        border-radius: 16px;
-        padding: 3rem;
-        text-align: center;
-        color: #64748b;
+    .signal-chip .bi  { color: #7890a8; }
+
+    .ml-section {
+        background: #0f172a; border: 1px solid #2d3f55;
+        border-radius: 16px; padding: 1.5rem;
     }
+    .ml-section .reco-card small { color: #a0aec0; }
+
+    .unavailable-banner {
+        background: #1e293b; border: 1px dashed #475569;
+        border-radius: 16px; padding: 3rem;
+        text-align: center; color: #94a3b8;
+    }
+    .unavailable-banner h4 { color: #cbd5e1; }
+    .unavailable-banner code { color: #d6a547; background: #1e3a50; padding: 2px 6px; border-radius: 4px; }
 </style>
 
 <div class="container py-4">
@@ -239,8 +236,8 @@
         </div>
 
         @* Recommandations actions commerciales *@
-        <div class="mt-4 p-4 rounded-3" style="background:#0f172a;border:1px solid #2d3f55;">
-            <h6 style="color:#d6a547;" class="mb-3"><i class="bi bi-lightbulb"></i> Recommandations commerciales</h6>
+        <div class="mt-4 ml-section">
+            <h6 style="color:#d6a547;" class="mb-3 ml-section"><i class="bi bi-lightbulb"></i> Recommandations commerciales</h6>
             <div class="row g-3">
                 @if (Model.LeadScorePct >= 70)
                 {

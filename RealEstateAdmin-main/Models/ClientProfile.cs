@@ -9,6 +9,8 @@ namespace RealEstateAdmin.Models
         public string PersonaSegment { get; init; } = string.Empty;
         public int ClusterId { get; init; }
         public DateTime LastUpdated { get; init; }
+        public string ModelTrainedOn { get; init; } = string.Empty;
+        public string UserDataSource { get; init; } = string.Empty;
 
         public string LeadScoreLabel => LeadScorePct >= 70 ? "Chaud"
             : LeadScorePct >= 40 ? "Tiède"

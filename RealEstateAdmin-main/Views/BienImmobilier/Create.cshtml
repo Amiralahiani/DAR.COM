@@ -115,7 +115,6 @@
                             </label>
                             <select asp-for="TypeTransaction" class="form-select">
                                 <option value="A Vendre">A Vendre</option>
-                                <option value="A Louer">A Louer</option>
                             </select>
                         </div>
 
@@ -126,9 +125,8 @@
                                     <i class="bi bi-flag"></i> @Html.DisplayNameFor(m => m.PublicationStatus)
                                 </label>
                                 <select asp-for="PublicationStatus" class="form-select">
-                                    <option>En attente</option>
                                     <option>Publié</option>
-                                    <option>Refusé</option>
+                                    <option>Non publié</option>
                                 </select>
                             </div>
                             <div class="mb-4">

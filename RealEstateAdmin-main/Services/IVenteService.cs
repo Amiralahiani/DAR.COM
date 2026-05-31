@@ -5,7 +5,7 @@ namespace RealEstateAdmin.Services
     public interface IVenteService
     {
         Task<SalesIndexData> GetIndexDataAsync(SalesFilter filter);
-        Task<SalesCreateData> GetCreateDataAsync(SalesCreateInput? input = null);
+        Task<SalesCreateData> GetCreateDataAsync(SalesCreateInput? input = null, string? currentUserId = null, bool isSuperAdmin = false);
         Task<ServiceResult<int>> CreateManualAsync(SalesCreateInput input, string? actorUserId);
         Task<ServiceResult> UpdatePaymentAsync(int id, string paymentMethod, string paymentStatus, string? actorUserId);
         Task<string> ExportCsvAsync();

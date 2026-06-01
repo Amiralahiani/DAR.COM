@@ -1,20 +1,30 @@
 import os
 import re
+import logging
+import time
 import requests
 import urllib.parse
 from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
-print("API KEY =", os.getenv("GROQ_API_KEY"))
+groq_api_key = os.getenv("GROQ_API_KEY")
 
 client = OpenAI(
-    api_key=os.getenv("GROQ_API_KEY"),
+    api_key=groq_api_key,
     base_url="https://api.groq.com/openai/v1"
-)
+) if groq_api_key else None
 
-def get_response(message):
+_CONTEXT_TTL_SECONDS = 15 * 60
+_last_filters_by_user = {}
+_last_context_ts_by_user = {}
+
+
+def get_response(message, user_id=None, shop_base_url=None):
+    process_question = _is_process_question(message)
+
     # try to handle shop-related queries via the Shop API (DB-backed)
     try:
         filters = {}
@@ -23,16 +33,31 @@ def get_response(message):
         except Exception:
             filters = {}
 
-        # If message looks like a shop search or filters present, query the shop API first
-        if filters or _is_shop_search(message):
-            api_base = os.getenv('REAL_ESTATE_BASE', 'http://127.0.0.1:5160')
-            api_url = api_base.rstrip('/') + '/api/shop/filter'
-            try:
-                resp = requests.get(api_url, params=filters, timeout=5)
-                if resp.status_code == 200:
+        previous_filters = _get_recent_filters(user_id)
+        looks_follow_up = _is_follow_up_filter_message(message)
+        effective_filters = _merge_filters(previous_filters, filters) if (previous_filters and (filters or looks_follow_up)) else filters
+
+        # If message looks like a shop search or filters present, query the shop API first.
+        # Procedure/guidance questions must go to LLM fallback.
+        should_query_shop = (
+            not process_question
+            and (effective_filters or _is_shop_search(message) or (looks_follow_up and previous_filters))
+        )
+
+        if should_query_shop:
+            api_bases = _shop_api_base_candidates(shop_base_url)
+            for api_base in api_bases:
+                api_url = api_base.rstrip('/') + '/api/shop/filter'
+                try:
+                    resp = requests.get(api_url, params=effective_filters, timeout=5)
+                    if resp.status_code != 200:
+                        continue
+
                     data = resp.json()
                     count = data.get('count', 0)
                     items = data.get('items', [])
+                    _save_filters_context(user_id, effective_filters)
+
                     if count == 0:
                         return "Je n'ai trouvé aucun bien disponible correspondant à ta recherche dans le shop DAR.COM."
 
@@ -43,8 +68,9 @@ def get_response(message):
                         prix = item.get('Prix') or item.get('prix')
                         bid = item.get('Id') or item.get('id')
                         detail_link = api_base.rstrip('/') + f"/Shop/Details/{bid}" if bid is not None else ''
-                        narrative = f"Le bien le plus cher disponible dans le shop DAR.COM est :\n- {title} — {prix} DT — {detail_link}"
-                        narrative += f"\nConsulte-le ici : {detail_link}"
+                        narrative = f"Le bien le plus cher disponible dans le shop DAR.COM est :\n- {title} — {prix} DT"
+                        if detail_link:
+                            narrative += f" — [Voir ce bien]({detail_link})"
                         return narrative
 
                     if _is_cheapest_search(message) and items:
@@ -54,12 +80,12 @@ def get_response(message):
                         prix = item.get('Prix') or item.get('prix')
                         bid = item.get('Id') or item.get('id')
                         detail_link = api_base.rstrip('/') + f"/Shop/Details/{bid}" if bid is not None else ''
-                        narrative = f"Le bien le moins cher disponible dans le shop DAR.COM est :\n- {title} — {prix} DT — {detail_link}"
-                        narrative += f"\nConsulte-le ici : {detail_link}"
+                        narrative = f"Le bien le moins cher disponible dans le shop DAR.COM est :\n- {title} — {prix} DT"
+                        if detail_link:
+                            narrative += f" — [Voir ce bien]({detail_link})"
                         return narrative
 
                     narrative = f"J'ai trouvé {count} bien(s) disponibles dans le shop DAR.COM."
-                    # include up to 3-item preview with details link
                     if items:
                         preview = []
                         for it in items[:3]:
@@ -68,20 +94,20 @@ def get_response(message):
                             bid = it.get('Id') or it.get('id')
                             detail_link = api_base.rstrip('/') + f"/Shop/Details/{bid}" if bid is not None else ''
                             if prix is not None and detail_link:
-                                preview.append(f"- {title} — {prix} DT — {detail_link}")
+                                preview.append(f"- {title} — {prix} DT — [Voir le bien]({detail_link})")
                             elif detail_link:
-                                preview.append(f"- {title} — {detail_link}")
+                                preview.append(f"- {title} — [Voir le bien]({detail_link})")
                             else:
                                 preview.append(f"- {title}")
                         if preview:
                             narrative += "\nAperçu :\n" + "\n".join(preview)
 
-                    link = _build_shop_link(api_base, filters)
-                    narrative += f"\nConsulte-les ici : {link}"
+                    link = _build_shop_link(api_base, effective_filters)
+                    narrative += f"\n[Voir tous les biens correspondants]({link})"
                     return narrative
-            except Exception:
-                # if shop API fails, fall back to LLM below
-                pass
+                except Exception:
+                    # try next base candidate
+                    continue
 
     except Exception:
         # non-blocking: continue to LLM fallback
@@ -89,6 +115,9 @@ def get_response(message):
 
     # fallback to LLM for general conversation (keep original behavior)
     try:
+        if client is None:
+            return _fallback_without_llm(message)
+
         response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
@@ -222,9 +251,167 @@ Répondre :
 
         return response.choices[0].message.content
 
-    except Exception as e:
-        print("ERROR:", e)
+    except Exception:
+        logger.exception("Erreur lors de la génération de réponse chatbot.")
         return "Erreur chatbot IA"
+
+
+def _fallback_without_llm(message: str) -> str:
+    text = (message or "").strip()
+    text_l = text.lower()
+
+    if _is_greeting(text_l):
+        return (
+            "Bonjour ! Je suis l'assistant DAR.COM.\n"
+            "Je peux déjà vous aider à chercher des biens du shop en direct.\n"
+            "Exemples :\n"
+            "- je cherche une maison à sfax\n"
+            "- appartement à tunis entre 300k et 500k"
+        )
+
+    if _is_shop_search(text_l) or _is_follow_up_filter_message(text_l):
+        return (
+            "Je n'ai pas pu interroger le shop pour le moment. "
+            "Merci de réessayer dans quelques secondes."
+        )
+
+    if _is_process_question(text_l):
+        return (
+            "Pour acheter un bien DAR.COM :\n"
+            "1) Réserver une visite du bien.\n"
+            "2) Confirmer votre intérêt après la visite.\n"
+            "3) Demander un RDV de négociation.\n"
+            "4) Finaliser le dossier et le paiement."
+        )
+
+    return (
+        "Le service IA avancé n'est pas configuré actuellement. "
+        "Vous pouvez quand même chercher des biens (ville, budget, surface)."
+    )
+
+
+def _is_greeting(text_l: str) -> bool:
+    return any(greet in text_l for greet in [
+        "bonjour",
+        "salut",
+        "bonsoir",
+        "hello",
+        "hi",
+        "salam",
+        "slm",
+    ])
+
+
+def _context_key(user_id) -> str:
+    raw = str(user_id or "").strip()
+    return raw.lower() if raw else "__anonymous__"
+
+
+def _merge_filters(base: dict, extra: dict) -> dict:
+    merged = dict(base or {})
+    merged.update(extra or {})
+    return merged
+
+
+def _save_filters_context(user_id, filters: dict):
+    if not filters:
+        return
+    key = _context_key(user_id)
+    _last_filters_by_user[key] = dict(filters)
+    _last_context_ts_by_user[key] = time.time()
+
+
+def _get_recent_filters(user_id) -> dict:
+    key = _context_key(user_id)
+    ts = _last_context_ts_by_user.get(key)
+    if ts is None:
+        return {}
+    if (time.time() - ts) > _CONTEXT_TTL_SECONDS:
+        _last_context_ts_by_user.pop(key, None)
+        _last_filters_by_user.pop(key, None)
+        return {}
+    return dict(_last_filters_by_user.get(key, {}))
+
+
+def _shop_api_base_candidates(shop_base_url=None):
+    candidates = []
+    if shop_base_url and str(shop_base_url).strip():
+        candidates.append(str(shop_base_url).strip())
+    env_base = os.getenv('REAL_ESTATE_BASE')
+    if env_base and env_base.strip():
+        candidates.append(env_base.strip())
+    candidates.extend([
+        'http://127.0.0.1:5160',
+        'http://localhost:5160',
+    ])
+
+    normalized = []
+    seen = set()
+    for c in candidates:
+        base = c.rstrip('/')
+        if base and base not in seen:
+            seen.add(base)
+            normalized.append(base)
+    return normalized
+
+
+def _is_follow_up_filter_message(text: str) -> bool:
+    text_l = (text or "").lower().strip()
+    if not text_l:
+        return False
+
+    if re.fullmatch(r"[0-9\s.,kKmM\-–—/dtndinar]+", text_l):
+        return True
+
+    if re.search(r"\b\d", text_l) and len(text_l) <= 40:
+        return True
+
+    follow_up_markers = [
+        "budget",
+        "entre",
+        "plus de",
+        "moins de",
+        "a partir",
+        "à partir",
+        "jusqu",
+        "max",
+        "min",
+        "dt",
+        "tnd",
+        "dinar",
+    ]
+    return any(marker in text_l for marker in follow_up_markers)
+
+
+def _is_process_question(text: str) -> bool:
+    text_l = (text or "").lower().strip()
+    if not text_l:
+        return False
+
+    direct_phrases = [
+        "comment je fais pour acheter",
+        "comment acheter",
+        "comment je peux acheter",
+        "comment je peux exprimer mon intérêt",
+        "comment je peux exprimer mon interet",
+        "comment exprimer mon intérêt",
+        "comment exprimer mon interet",
+        "comment réserver une visite",
+        "comment reserver une visite",
+        "comment prendre rdv",
+        "comment prendre rendez-vous",
+        "comment prendre rendez vous",
+        "quelle est la procédure d'achat",
+        "quelle est la procedure d'achat",
+        "quelles sont les étapes d'achat",
+        "quelles sont les etapes d'achat",
+    ]
+    if any(phrase in text_l for phrase in direct_phrases):
+        return True
+
+    asks_how = bool(re.search(r"\b(comment|proc[eé]dure|[eé]tapes?)\b", text_l))
+    process_terms = bool(re.search(r"\b(achat|acheter|visite|rdv|rendez[\s-]?vous|int[eé]r[êe]t|n[eé]gociation|paiement|finalisation)\b", text_l))
+    return asks_how and process_terms
 
 def _parse_number(s: str) -> float:
     s = s.lower().strip()
@@ -256,6 +443,7 @@ def _parse_number(s: str) -> float:
 def _extract_filters(text: str) -> dict:
     text_l = text.lower()
     filters = {}
+    text_l = text_l.replace("–", "-").replace("—", "-")
 
     # price between
     m = re.search(r'prix[^\n\r]*entre\s+([0-9\s.,kKmM]+)\s+et\s+([0-9\s.,kKmM]+)', text_l)
@@ -270,6 +458,34 @@ def _extract_filters(text: str) -> dict:
         filters['prixMin'] = int(_parse_number(m.group(1)))
         filters['prixMax'] = int(_parse_number(m.group(2)))
         # continue to allow address detection
+
+    # compact range syntax: "300-400k" / "300k - 400k"
+    m = re.search(r"\b([0-9][0-9\s.,kKmM]*)\s*-\s*([0-9][0-9\s.,kKmM]*)\b", text_l)
+    if m:
+        raw_left = m.group(1).strip().lower()
+        raw_right = m.group(2).strip().lower()
+        left = _parse_number(raw_left)
+        right = _parse_number(raw_right)
+
+        if "k" in raw_right and "k" not in raw_left and left < 10000:
+            left *= 1000
+        if "m" in raw_right and "m" not in raw_left and left < 10000:
+            left *= 1000000
+        if "k" in raw_left and "k" not in raw_right and right < 10000:
+            right *= 1000
+        if "m" in raw_left and "m" not in raw_right and right < 10000:
+            right *= 1000000
+
+        left = int(left)
+        right = int(right)
+        if left > right:
+            left, right = right, left
+        if any(token in text_l for token in ["surface", "m2", "m²"]):
+            filters['surfaceMin'] = left
+            filters['surfaceMax'] = right
+        else:
+            filters['prixMin'] = left
+            filters['prixMax'] = right
 
     # price greater
     m = re.search(r'(?:prix[^\n\r]*(?:supérieur|supérieure|sup|>\s|>\s*|plus de|>=|>))\s*([0-9\s.,kKmM]+)', text_l)
@@ -309,32 +525,34 @@ def _extract_filters(text: str) -> dict:
         if city in text_l:
             # preserve capitalization for display/link
             filters['adresse'] = city.title()
-            return filters
 
-    # fallback: try to capture a location after prepositions like 'à', 'dans', 'pour'
-    m = re.search(r"\b(?:à(?!\s+partir)|a(?!\s+partir)|dans|sur|pour|à\s+la|a\s+la)\s+([a-zà-ÿ\-\s]+)\b", text_l)
-    if m:
+    # fallback: try to capture a location after prepositions like 'à', 'dans', 'sur'
+    # (exclude "pour" to avoid false positives such as "pour acheter")
+    m = re.search(r"\b(?:à(?!\s+partir)|a(?!\s+partir)|dans|sur|à\s+la|a\s+la)\s+([a-zà-ÿ\-\s]+)\b", text_l)
+    if m and 'adresse' not in filters:
         loc = m.group(1).strip()
         # take first token as locality
         loc_token = loc.split()[0]
-        if len(loc_token) >= 3:
+        invalid_location_tokens = {
+            "acheter", "achat", "vendre", "vente", "louer", "location",
+            "rdv", "rendez", "vous", "visite", "interet", "intérêt",
+            "prix", "budget", "bien", "biens", "maison", "villa",
+            "appartement", "terrain", "comment", "faire", "fais"
+        }
+        if len(loc_token) >= 3 and loc_token not in invalid_location_tokens:
             filters['adresse'] = loc_token.title()
-            return filters
 
     # surface
     m = re.search(r'surface[^\n\r]*entre\s+([0-9\s.,]+)\s+et\s+([0-9\s.,]+)', text_l)
     if m:
         filters['surfaceMin'] = int(_parse_number(m.group(1)))
         filters['surfaceMax'] = int(_parse_number(m.group(2)))
-        return filters
     m = re.search(r'surface[^\n\r]*(?:supérieur|plus de|>)\s*([0-9\s.,]+)', text_l)
     if m:
         filters['surfaceMin'] = int(_parse_number(m.group(1)))
-        return filters
     m = re.search(r'surface[^\n\r]*(?:inférieur|moins de|<)\s*([0-9\s.,]+)', text_l)
     if m:
         filters['surfaceMax'] = int(_parse_number(m.group(1)))
-        return filters
 
     return filters
 
@@ -364,7 +582,7 @@ def _is_shop_search(text: str) -> bool:
     keywords = [
         'bien', 'biens', 'appartement', 'maison', 'villa', 'terrain',
         'immobilier', 'disponible', 'disponibles', 'à vendre', 'a vendre',
-        'recherche', 'annonce', 'a la marsa', 'la marsa', 'tunis', 'shop',
+        'recherche', 'cherche', 'je cherche', 'annonce', 'a la marsa', 'la marsa', 'tunis', 'shop',
         'plus cher', 'moins cher', 'le plus cher', 'le moins cher'
     ]
     # include some city names to catch location queries

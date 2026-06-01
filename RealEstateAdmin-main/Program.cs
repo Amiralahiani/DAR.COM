@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using QuestPDF.Infrastructure;
 using RealEstateAdmin.Data;
 using RealEstateAdmin.Models;
 using RealEstateAdmin.Services;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,9 +40,38 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
     
     // Configuration de la connexion
     options.SignIn.RequireConfirmedAccount = true;
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+    options.Lockout.AllowedForNewUsers = true;
 })
 .AddRoles<IdentityRole>()
 .AddEntityFrameworkStores<ApplicationIdentityDbContext>();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("auth", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 10;
+        limiterOptions.Window = TimeSpan.FromMinutes(5);
+        limiterOptions.QueueLimit = 0;
+    });
+
+    options.AddFixedWindowLimiter("public-contact", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 6;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueLimit = 0;
+    });
+
+    options.AddFixedWindowLimiter("chatbot", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 30;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueLimit = 0;
+    });
+});
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -121,6 +152,7 @@ app.Use(async (context, next) =>
 });
 
 app.UseRouting();
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

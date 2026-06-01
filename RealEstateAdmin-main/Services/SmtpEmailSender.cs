@@ -31,7 +31,6 @@ namespace RealEstateAdmin.Services
             if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(from))
             {
                 _logger.LogWarning("SMTP non configuré. Email non envoyé à {Email}. Sujet: {Subject}", email, subject);
-                _logger.LogInformation("Contenu email (debug): {Body}", htmlMessage);
                 return;
             }
 

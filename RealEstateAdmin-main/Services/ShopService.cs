@@ -45,11 +45,14 @@ namespace RealEstateAdmin.Services
 
         public async Task<BienImmobilier?> GetBienByIdAsync(int id)
         {
-            return await _context.Biens
+            var query = _context.Biens
                 .Include(b => b.User)
                 .Include(b => b.Images)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(b => b.Id == id && b.IsPublished && b.PublicationStatus == "Publié");
+                .Where(b => b.IsPublished && b.PublicationStatus == "Publié");
+
+            query = ExcludeBiensWithActiveTransactions(query);
+            return await query.FirstOrDefaultAsync(b => b.Id == id);
         }
 
         public async Task<ShopIndexData> GetSoldeDataAsync(ShopFilter filter)
@@ -69,6 +72,8 @@ namespace RealEstateAdmin.Services
                     string.IsNullOrEmpty(b.TypeTransaction)
                     || b.TypeTransaction == "A Vendre")
                 .AsQueryable();
+
+            biensQuery = ExcludeBiensWithActiveTransactions(biensQuery);
 
             if (!string.IsNullOrEmpty(filter.Titre))
             {
@@ -192,6 +197,13 @@ namespace RealEstateAdmin.Services
             }
 
             return filter;
+        }
+
+        private IQueryable<BienImmobilier> ExcludeBiensWithActiveTransactions(IQueryable<BienImmobilier> query)
+        {
+            return query.Where(b => !_context.Sales.Any(s =>
+                s.BienImmobilierId == b.Id
+                && s.TransactionStatus != "Annulée"));
         }
 
         public async Task<ServiceResult> ReserveVisitAsync(int bienId, DateTime visitSlot, string userId)
@@ -468,6 +480,14 @@ namespace RealEstateAdmin.Services
             if (requireAvailableStatus && bien.StatutCommercial != "Disponible")
             {
                 return (false, ServiceResult.Fail(ServiceErrorCode.Conflict, "Ce bien n'est pas disponible pour une visite."), null, null);
+            }
+
+            var hasActiveTransaction = await _context.Sales.AnyAsync(s =>
+                s.BienImmobilierId == bien.Id
+                && s.TransactionStatus != "Annulée");
+            if (hasActiveTransaction)
+            {
+                return (false, ServiceResult.Fail(ServiceErrorCode.Conflict, "Une transaction est déjà en cours pour ce bien."), null, null);
             }
 
             return (true, null, user, bien);

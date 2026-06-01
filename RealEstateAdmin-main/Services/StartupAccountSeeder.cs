@@ -178,7 +178,12 @@ namespace RealEstateAdmin.Services
             }
 
             var ownerId = await ResolveUserIdByEmailAsync(seedBien.OwnerEmail);
-            ApplySeedBienValues(bien!, seedBien, ownerId);
+            var hasActiveSaleTransaction = !isNew
+                && await _applicationDbContext.Sales.AnyAsync(
+                    s => s.BienImmobilierId == bien!.Id && s.TransactionStatus != "Annulée",
+                    cancellationToken);
+
+            ApplySeedBienValues(bien!, seedBien, ownerId, hasActiveSaleTransaction);
 
             await _applicationDbContext.SaveChangesAsync(cancellationToken);
 
@@ -223,7 +228,11 @@ namespace RealEstateAdmin.Services
             return user?.Id;
         }
 
-        private static void ApplySeedBienValues(BienImmobilier bien, SeedBienOptions seedBien, string? ownerId)
+        private static void ApplySeedBienValues(
+            BienImmobilier bien,
+            SeedBienOptions seedBien,
+            string? ownerId,
+            bool hasActiveSaleTransaction)
         {
             bien.UserId = ownerId;
             bien.Titre = seedBien.Titre;
@@ -233,10 +242,37 @@ namespace RealEstateAdmin.Services
             bien.Surface = seedBien.Surface;
             bien.NombrePieces = seedBien.NombrePieces;
             bien.ImageUrl = seedBien.ImageUrl;
-            bien.TypeTransaction = "A Vendre";
-            bien.StatutCommercial = NormalizeStatutCommercial(seedBien.StatutCommercial);
-            bien.IsPublished = seedBien.IsPublished;
-            bien.PublicationStatus = NormalizePublicationStatus(seedBien.PublicationStatus, seedBien.IsPublished);
+
+            var seededTypeTransaction = "A Vendre";
+            var seededCommercialStatus = NormalizeStatutCommercial(seedBien.StatutCommercial);
+            var seededPublicationStatus = NormalizePublicationStatus(seedBien.PublicationStatus, seedBien.IsPublished);
+
+            if (hasActiveSaleTransaction)
+            {
+                if (string.IsNullOrWhiteSpace(bien.TypeTransaction))
+                {
+                    bien.TypeTransaction = seededTypeTransaction;
+                }
+
+                if (string.IsNullOrWhiteSpace(bien.StatutCommercial))
+                {
+                    bien.StatutCommercial = seededCommercialStatus;
+                }
+
+                if (string.IsNullOrWhiteSpace(bien.PublicationStatus))
+                {
+                    bien.IsPublished = seedBien.IsPublished;
+                    bien.PublicationStatus = seededPublicationStatus;
+                }
+            }
+            else
+            {
+                bien.TypeTransaction = seededTypeTransaction;
+                bien.StatutCommercial = seededCommercialStatus;
+                bien.IsPublished = seedBien.IsPublished;
+                bien.PublicationStatus = seededPublicationStatus;
+            }
+
             bien.DiscountPercent = Math.Clamp(seedBien.DiscountPercent, 0, 100);
             bien.Latitude = seedBien.Latitude;
             bien.Longitude = seedBien.Longitude;

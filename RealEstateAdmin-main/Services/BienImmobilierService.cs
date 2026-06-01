@@ -427,7 +427,14 @@ namespace RealEstateAdmin.Services
                 }
                 else
                 {
-                    existingBien.PublicationStatus = NormalizePublicationStatus(bienImmobilier.PublicationStatus, existingBien.PublicationStatus);
+                    var targetPublicationStatus = NormalizePublicationStatus(bienImmobilier.PublicationStatus, existingBien.PublicationStatus);
+                    if (string.Equals(targetPublicationStatus, "Publié", StringComparison.OrdinalIgnoreCase)
+                        && await HasActiveSaleTransactionAsync(existingBien.Id))
+                    {
+                        return ServiceResult.Fail(ServiceErrorCode.Conflict, "Publication impossible: une transaction active existe pour ce bien.");
+                    }
+
+                    existingBien.PublicationStatus = targetPublicationStatus;
                     existingBien.StatutCommercial = NormalizeCommercialStatus(bienImmobilier.StatutCommercial, existingBien.StatutCommercial);
                     existingBien.IsPublished = string.Equals(existingBien.PublicationStatus, "Publié", StringComparison.OrdinalIgnoreCase);
                     await ApplyValidatorOnPublicationDecisionAsync(existingBien, currentUserId);
@@ -533,7 +540,13 @@ namespace RealEstateAdmin.Services
                 return ownerAssignmentResult;
             }
 
-            bienImmobilier.IsPublished = !bienImmobilier.IsPublished;
+            var targetIsPublished = !bienImmobilier.IsPublished;
+            if (targetIsPublished && await HasActiveSaleTransactionAsync(bienImmobilier.Id))
+            {
+                return ServiceResult.Fail(ServiceErrorCode.Conflict, "Publication impossible: une transaction active existe pour ce bien.");
+            }
+
+            bienImmobilier.IsPublished = targetIsPublished;
             bienImmobilier.PublicationStatus = bienImmobilier.IsPublished ? "Publié" : "Non publié";
             await ApplyValidatorOnPublicationDecisionAsync(bienImmobilier, actorUserId);
             _context.Update(bienImmobilier);
@@ -561,6 +574,12 @@ namespace RealEstateAdmin.Services
             if (!ownerAssignmentResult.Success)
             {
                 return ownerAssignmentResult;
+            }
+
+            if (string.Equals(status, "Publié", StringComparison.OrdinalIgnoreCase)
+                && await HasActiveSaleTransactionAsync(bienImmobilier.Id))
+            {
+                return ServiceResult.Fail(ServiceErrorCode.Conflict, "Publication impossible: une transaction active existe pour ce bien.");
             }
 
             bienImmobilier.PublicationStatus = status;
@@ -605,6 +624,13 @@ namespace RealEstateAdmin.Services
             await _context.SaveChangesAsync();
             await _auditLogService.LogAsync(actorUserId, "Status", "BienImmobilier", bienImmobilier.Id, $"Statut commercial: {commercialStatus} - '{bienImmobilier.Titre}'");
             return ServiceResult.Ok();
+        }
+
+        private Task<bool> HasActiveSaleTransactionAsync(int bienId)
+        {
+            return _context.Sales.AnyAsync(s =>
+                s.BienImmobilierId == bienId
+                && s.TransactionStatus != "Annulée");
         }
 
         private async Task<ServiceResult> EnsureOwnerAssignedAsync(BienImmobilier bienImmobilier, string? fallbackOwnerUserId)

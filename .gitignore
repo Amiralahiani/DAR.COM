@@ -20,3 +20,4 @@ RealEstateAdmin-main/obj/
 
 # Configuration locale de dev
 RealEstateAdmin-main/appsettings.Development.json
+Chatbot/.env

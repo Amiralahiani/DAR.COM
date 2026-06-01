@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RealEstateAdmin.Models;
 using RealEstateAdmin.Services;
 
@@ -58,6 +59,7 @@ namespace RealEstateAdmin.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [AllowAnonymous]
+        [EnableRateLimiting("public-contact")]
         public async Task<IActionResult> Create([Bind("NomUtilisateur,Email,Sujet,Contenu,Destinataire")] Message message)
         {
             if (!ModelState.IsValid)

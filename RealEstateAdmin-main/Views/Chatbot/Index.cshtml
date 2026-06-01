@@ -108,7 +108,7 @@
 
     <!-- Iframe chatbot -->
     <div class="chatbot-frame-shell">
-        <iframe src="/chatbot/index.html" title="Assistant IA DAR.COM"
+        <iframe id="chatbotFrame" src="/chatbot/index.html" title="Assistant IA DAR.COM"
                 allow="microphone"></iframe>
     </div>
 
@@ -120,3 +120,33 @@
     </div>
 
 </div>
+
+<script>
+    (function () {
+        const frame = document.getElementById("chatbotFrame");
+        if (!frame) return;
+
+        const wireLinks = () => {
+            try {
+                const doc = frame.contentDocument || frame.contentWindow?.document;
+                if (!doc) return;
+
+                doc.addEventListener("click", function (event) {
+                    const anchor = event.target?.closest?.("a[href]");
+                    if (!anchor) return;
+
+                    const href = anchor.getAttribute("href");
+                    if (!href) return;
+
+                    event.preventDefault();
+                    window.open(href, "_blank", "noopener,noreferrer");
+                }, true);
+            } catch {
+                // no-op
+            }
+        };
+
+        frame.addEventListener("load", wireLinks);
+        wireLinks();
+    })();
+</script>

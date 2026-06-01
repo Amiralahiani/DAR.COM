@@ -86,6 +86,9 @@ namespace RealEstateAdmin.Controllers
         {
             var biens = await _context.Biens
                 .Where(b => b.IsPublished && b.PublicationStatus == "Publié")
+                .Where(b => !_context.Sales.Any(s =>
+                    s.BienImmobilierId == b.Id
+                    && s.TransactionStatus != "Annulée"))
                 .ToListAsync();
 
             await GeocodesMissingAsync(biens);
@@ -106,6 +109,9 @@ namespace RealEstateAdmin.Controllers
         {
             var biens = await _context.Biens
                 .Where(b => b.IsPublished && b.PublicationStatus == "Publié" && b.DiscountPercent > 0)
+                .Where(b => !_context.Sales.Any(s =>
+                    s.BienImmobilierId == b.Id
+                    && s.TransactionStatus != "Annulée"))
                 .ToListAsync();
 
             await GeocodesMissingAsync(biens);

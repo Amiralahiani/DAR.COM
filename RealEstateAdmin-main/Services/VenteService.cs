@@ -98,6 +98,9 @@ namespace RealEstateAdmin.Services
         {
             var query = _context.Biens
                 .Where(b => b.StatutCommercial != "Vendu")
+                .Where(b => !_context.Sales.Any(s =>
+                    s.BienImmobilierId == b.Id
+                    && s.TransactionStatus != "Annulée"))
                 .AsQueryable();
 
             if (!isSuperAdmin && !string.IsNullOrWhiteSpace(currentUserId))

@@ -87,11 +87,18 @@ namespace RealEstateAdmin.Controllers
             if (photo.Length > 10 * 1024 * 1024)
                 return Json(new { valid = false, decision = "rejected", reason = "La photo ne doit pas dépasser 10 Mo." });
 
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+            var ext = Path.GetExtension(photo.FileName).ToLowerInvariant();
+            if (!allowedExtensions.Contains(ext))
+                return Json(new { valid = false, decision = "rejected", reason = "Extension non supportée. Utilisez JPG, PNG ou WebP." });
+
+            if (!await IsSupportedImageSignatureAsync(photo, ext))
+                return Json(new { valid = false, decision = "rejected", reason = "Le fichier image est invalide ou corrompu." });
+
             // Sauvegarde dans wwwroot/uploads/annonces/
             var uploadsDir = Path.Combine(_env.WebRootPath, "uploads", "annonces");
             Directory.CreateDirectory(uploadsDir);
 
-            var ext      = Path.GetExtension(photo.FileName).ToLower();
             var fileName = $"{Guid.NewGuid()}{ext}";
             var filePath = Path.Combine(uploadsDir, fileName);
 
@@ -131,11 +138,11 @@ namespace RealEstateAdmin.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Microservice analyse image injoignable — fallback accepté.");
+                _logger.LogWarning(ex, "Microservice analyse image injoignable.");
             }
 
-            // Fallback : service indisponible → on accepte avec statut "review"
-            return Json(new { valid = true, decision = "review", reason = "Service d'analyse indisponible — vérification manuelle.", url = relativeUrl });
+            // Service indisponible: on rejette pour éviter une publication non vérifiée.
+            return Json(new { valid = false, decision = "rejected", reason = "Service d'analyse indisponible. Veuillez réessayer.", url = relativeUrl });
         }
 
         /// <summary>
@@ -491,6 +498,47 @@ namespace RealEstateAdmin.Controllers
                     value = (int)Math.Round(doubleValue);
                     return true;
                 }
+            }
+
+            return false;
+        }
+
+        private static async Task<bool> IsSupportedImageSignatureAsync(IFormFile photo, string extension)
+        {
+            byte[] header;
+            await using (var stream = photo.OpenReadStream())
+            {
+                header = new byte[12];
+                var bytesRead = await stream.ReadAsync(header, 0, header.Length);
+                if (bytesRead < 4)
+                {
+                    return false;
+                }
+            }
+
+            extension = extension.ToLowerInvariant();
+            if (extension == ".jpg" || extension == ".jpeg")
+            {
+                return header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF;
+            }
+
+            if (extension == ".png")
+            {
+                var png = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+                return header.Length >= png.Length && header.Take(png.Length).SequenceEqual(png);
+            }
+
+            if (extension == ".webp")
+            {
+                return header.Length >= 12
+                    && header[0] == (byte)'R'
+                    && header[1] == (byte)'I'
+                    && header[2] == (byte)'F'
+                    && header[3] == (byte)'F'
+                    && header[8] == (byte)'W'
+                    && header[9] == (byte)'E'
+                    && header[10] == (byte)'B'
+                    && header[11] == (byte)'P';
             }
 
             return false;
